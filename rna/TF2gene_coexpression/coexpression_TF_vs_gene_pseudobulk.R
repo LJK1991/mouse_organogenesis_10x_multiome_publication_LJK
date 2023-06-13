@@ -45,8 +45,14 @@ if (args$remove_ExE_cells) {
 ## Load pseudobulk RNA ##
 #########################
 
+#LJK-230414-modify
+# performed some additional filtering for celltypes, as in my data not all celltypes are present and if they are not it produces erros
 # Load SingleCellExperiment
-rna.sce <- readRDS(args$sce)[,opts$celltypes]
+rna.sce <- readRDS(args$sce)
+opts$celltypes <- opts$celltypes[opts$celltypes %in% rownames(rna.sce@metadata$n_cells)]
+rna.sce <- rna.sce[,opts$celltypes]
+
+
 
 ##################################################
 ## Split RNA expression matrix into TF vs genes ##

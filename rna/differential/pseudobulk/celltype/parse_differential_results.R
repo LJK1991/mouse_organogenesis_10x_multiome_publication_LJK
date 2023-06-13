@@ -29,6 +29,10 @@ dir.create(args$outdir, showWarnings = F, recursive = T)
 
 diff_results_list <- list()
 
+#LJK-modify-230417
+#added an if/else to check if the file was "empty" (contianing only one row) or not
+#otherwise skip
+
 # i <- "Visceral_endoderm"; j <- "Surface_ectoderm"
 for (i in 1:length(opts$celltypes)) {
   for (j in i:length(opts$celltypes)) {
@@ -37,7 +41,11 @@ for (i in 1:length(opts$celltypes)) {
       file <- file.path(args$diff_results_dir,sprintf("%s_vs_%s.txt.gz",opts$celltypes[[i]],opts$celltypes[[j]]))
       if (file.exists(file)) {
         tmp <- fread(file) %>% .[,c("celltypeA","celltypeB"):=list(opts$celltypes[[i]],opts$celltypes[[j]])]
-        diff_results_list[[sprintf("%s_vs_%s",opts$celltypes[[i]],opts$celltypes[[j]])]] <- tmp
+        if (dim(tmp)[1] < 2){
+          next
+        } else {
+          diff_results_list[[sprintf("%s_vs_%s",opts$celltypes[[i]],opts$celltypes[[j]])]] <- tmp 
+        }
       } else {
         print(sprintf("%s not found...",file))
       }

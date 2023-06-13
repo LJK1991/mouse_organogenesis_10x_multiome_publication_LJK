@@ -80,11 +80,11 @@ sample_metadata <- fread(args$metadata) %>%
 if (args$remove_ExE_cells) {
   print("Removing ExE cells...")
   sample_metadata <- sample_metadata %>%
-    .[!celltype.mapped%in%c("Visceral_endoderm","ExE_endoderm","ExE_ectoderm","Parietal_endoderm")]
+    .[!celltype%in%c("Visceral_endoderm","ExE_endoderm","ExE_ectoderm","Parietal_endoderm")]
 }
 
 table(sample_metadata$stage)
-table(sample_metadata$celltype.mapped)
+table(sample_metadata$celltype)
 
 ###################
 ## Sanity checks ##

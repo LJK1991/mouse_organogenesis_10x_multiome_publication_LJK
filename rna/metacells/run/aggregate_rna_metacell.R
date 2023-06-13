@@ -4,6 +4,9 @@ source(here::here("settings.R"))
 source(here::here("utils.R"))
 
 library(reticulate)
+#LJK-230418-add
+#added just to be sure
+suppressPackageStartupMessages(library(dplyr))
 
 ######################
 ## Define arguments ##
@@ -39,7 +42,7 @@ stopifnot(file.exists(args$cell2metacell))
 dir.create(args$outdir, showWarnings = F)
 
 # Reticulate
-use_python(args$python, required = TRUE)
+#use_python(args$python, required = TRUE)
 sc <- import("scanpy")
 
 ###########################
@@ -96,8 +99,9 @@ dev.off()
 
 # Filter
 print(sprintf("Removing metacells that have less than %d reads (%d/%d)", args$metacell_min_reads, nreads_per_metacell.dt[nreads<=args$metacell_min_reads,.N], nrow(nreads_per_metacell.dt)))
-
-metacells.to.use <- intersect(sample_metadata$cell, nreads_per_metacell.dt[nreads>=args$metacell_min_reads,metacell])
+#test
+#metacells.to.use <- intersect(sample_metadata$cell, nreads_per_metacell.dt[nreads>=args$metacell_min_reads,metacell])
+metacells.to.use <- intersect(sample_metadata$metacell, nreads_per_metacell.dt[nreads>=args$metacell_min_reads,metacell])
 sample_metadata <- sample_metadata[metacell%in%metacells.to.use]
 cell2metacell.dt <- cell2metacell.dt[metacell%in%metacells.to.use]
 sce <- sce[,colnames(sce)%in%sample_metadata$cell]
@@ -141,11 +145,35 @@ if (args$normalisation_method=="deseq2") {
 ## Define metacell metadata ##
 ##############################
 
-metacell_metadata.dt <- sample_metadata %>%
-  .[,c("cell","sample","stage","genotype","celltype","closest.cell")] %>%
-  .[cell%in%colnames(sce_pseudobulk)] %>% setkey(cell) %>% .[colnames(sce_pseudobulk)] %>%
-  setnames("cell","metacell") %>%
-  merge(cell2metacell.dt[,.(ncells=.N),by="metacell"],by="metacell")
+#LJK-modify-230417
+#removed genotype from the metadata call list.
+#metacell_metadata.dt <- sample_metadata %>%
+#  .[,c("cell","sample","stage","celltype","closest.cell")] %>%
+#  .[cell%in%colnames(sce_pseudobulk)] %>% setkey(cell) %>% .[colnames(sce_pseudobulk)] %>%
+#  setnames("cell","metacell") %>%
+#  merge(cell2metacell.dt[,.(ncells=.N),by="metacell"],by="metacell")
+
+#LJK-add-230418
+#step 1 stays the same, make df smaller some columns are useless e.g. "cell" there is no point to to keep this info anymore, "closest.cell" nothing we can do with this info, purity will mean little here.
+#if you have genotype you can add it here.
+#second/third step make sure there are no metacells present that shouldnt and setkey metacell, will make everything easier i guess
+sample_metadata <- sample_metadata %>% .[,c("sample","stage","celltype","metacell")] %>% .[metacell%in%colnames(sce_pseudobulk)] %>% setkey(metacell)
+
+#create metacell_metadata.dt and start merging per column
+#now to get "purity" per column per metacell
+metacell_metadata.dt <- sample_metadata %>% group_by(metacell) %>% count(name="ncells")
+for (colname in colnames(sample_metadata)){
+  if (colname == "metacell"){
+    next
+  } else {
+    tmp <- sample_metadata %>% group_by(metacell) %>% count(get(colname)) %>% mutate(purity = n/sum(n)) %>% filter(purity == max(purity)) %>% .[,c(1,2,4)]
+    colnames(tmp) <- c('metacell',colname,paste(colname,"purity",sep="_"))
+    #for those where purity is divided equally
+    tmp <- tmp[!duplicated(tmp$metacell),]
+    metacell_metadata.dt <- merge(metacell_metadata.dt,tmp,by="metacell")
+  }
+  
+}
 
 # Add QC stats
 tmp <- data.table(

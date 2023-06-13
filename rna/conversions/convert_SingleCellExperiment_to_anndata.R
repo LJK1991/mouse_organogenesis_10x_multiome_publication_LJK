@@ -32,15 +32,14 @@ args <- p$parse_args(commandArgs(TRUE))
 ################
 ## Reticulate ##
 ################
-
-reticulate::use_python(args$python_path, required = TRUE)
-
+#LJK-modify-230405
+#commented folowing command as it args$python_path is never specified and therefor it gives errors
+#reticulate::use_python(args$python_path, required = TRUE)
 sc <- import("scanpy")
 
 ##########################
 ## Load sample metadata ##
 ##########################
-
 sample_metadata <- fread(args$metadata) %>% 
   .[pass_rnaQC==TRUE & doublet_call==FALSE]# %>%
   # .[,c("cell", "sample", "stage", "nFeature_RNA", "mitochondrial_percent_RNA", "ribosomal_percent_RNA", "celltype.mapped")] %>%
@@ -54,7 +53,6 @@ if (args$test_mode) {
 ###############
 ## Load data ##
 ###############
-
 # Load RNA expression data as SingleCellExperiment object
 sce <- load_SingleCellExperiment(args$sce, cells=sample_metadata$cell, normalise = FALSE)
 
@@ -88,7 +86,6 @@ colData(sce) <- sample_metadata %>% tibble::column_to_rownames("cell") %>% DataF
 #     ),
 #     var = data.frame(gene=rownames(sce), row.names=rownames(sce))
 # )
-
 adata_sce <- sc$AnnData(
     X   = t(counts(sce)),
     obs = as.data.frame(colData(sce)),
@@ -102,7 +99,6 @@ adata_sce
 ##########################
 ## Parse anndata object ##
 ##########################
-
 # Add stage colors
 adata_sce$uns$update(stage_colors = opts$stage.colors[sort(unique(as.character(adata_sce$obs$stage)))])
 adata_sce$uns["stage_colors"]
@@ -114,5 +110,4 @@ adata_sce$uns["celltype_colors"]
 ##########
 ## Save ##
 ##########
-
 adata_sce$write_h5ad(args$outfile, compression="gzip")

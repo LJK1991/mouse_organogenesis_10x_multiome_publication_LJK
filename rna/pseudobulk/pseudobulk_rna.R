@@ -16,6 +16,9 @@ p$add_argument('--group_by',    type="character",    help='Metadata column to gr
 p$add_argument('--normalisation_method',    type="character",    help='Metadata column to group cells by')
 p$add_argument('--outdir',      type="character",    help='Output directory')
 
+#LJK-added-230406
+#added an argument to add genotype, i dont have any KO but it asks for one, so lets specify and see what happens
+
 args <- p$parse_args(commandArgs(TRUE))
 
 ## START TEST ##
@@ -33,7 +36,15 @@ dir.create(args$outdir, showWarnings = F, recursive = T)
 ###############
 
 # Load cell metadata
-sample_metadata <- fread(args$metadata) %>%
+#sample_metadata <- fread(args$metadata) %>%
+#  .[,celltype_genotype:=as.character(NA)] %>% .[!is.na(genotype),celltype_genotype:=sprintf("%s-%s",celltype,genotype)] %>%
+#  .[pass_rnaQC==TRUE & doublet_call==FALSE & !is.na(eval(as.name(args$group_by)))]
+#LJK-modify-230406
+#added the genotype column and changed celltype.mapped to celltype
+sample_metadata <- fread(args$metadata)
+sample_metadata$genotype <- 'WT'
+colnames(sample_metadata)[which(colnames(sample_metadata) == 'celltype.mapped')] <- 'celltype'
+sample_metadata <- sample_metadata %>%
   .[,celltype_genotype:=as.character(NA)] %>% .[!is.na(genotype),celltype_genotype:=sprintf("%s-%s",celltype,genotype)] %>%
   .[pass_rnaQC==TRUE & doublet_call==FALSE & !is.na(eval(as.name(args$group_by)))]
 

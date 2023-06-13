@@ -60,6 +60,15 @@ sce <- sce[,sce$celltype %in% opts$groups]
 sce$celltype <- factor(sce$celltype, levels=opts$groups)
 table(sce$celltype)
 
+#LJK-add-23-04-17
+#make a stop if the celltype is not in present in the data. just copied the code for if the two celltypes are the same
+if (!args$groupA %in% sce$celltype | !args$groupB %in% sce$celltype){
+  out <- data.table(feature=NA, logFC=NA, padj_fdr=NA)
+  fwrite(out, args$outfile, sep="\t", na="NA", quote=F)
+  warning("groupA or groupB are not in the sce$celltype list, saving an empty file...")
+  quit(status=0)
+}
+
 #########################################
 ## Calculate average expression levels ##
 #########################################

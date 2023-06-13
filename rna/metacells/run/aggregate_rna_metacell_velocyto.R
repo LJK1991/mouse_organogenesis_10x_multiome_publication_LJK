@@ -119,8 +119,10 @@ assay(counts_pseudobulk.sce, "unspliced") <- assay(unspliced_pseudobulk.sce)
 ## Define metacell metadata ##
 ##############################
 
+#LJK-modify-230417
+#removed genotype from the metadata call list.
 metacell_metadata.dt <- sample_metadata %>%
-  .[,c("cell","sample","stage","genotype","celltype","closest.cell")] %>%
+  .[,c("cell","sample","stage","celltype","closest.cell")] %>%
   .[cell%in%colnames(counts_pseudobulk.sce)] %>% setkey(cell) %>% .[colnames(counts_pseudobulk.sce)] %>%
   setnames("cell","metacell") %>%
   merge(cell2metacell.dt[,.(ncells=.N),by="metacell"],by="metacell")

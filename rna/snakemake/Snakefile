@@ -7,18 +7,30 @@ import getpass
 ## Config ##
 ############
 
-host = os.uname()[1]
-if search("BI2404M", host) and getpass.getuser()=="argelagr":
-    configfile: "config_ricard_local.yaml"
-elif search("[headstone|pebble]", host) and getpass.getuser()=="argelagr":
-    configfile: "config_ricard_babraham.yaml"
-elif search("[headstone|pebble]", host) and getpass.getuser()=="stephen":
-    configfile: "config_stephen_babraham.yaml"
-else:
-    print("Computer not recognised")
-    exit()
+#host = os.uname()[1]
+#if search("BI2404M", host) and getpass.getuser()=="argelagr":
+#    configfile: "config_ricard_local.yaml"
+#elif search("[headstone|pebble]", host) and getpass.getuser()=="argelagr":
+#   configfile: "config_ricard_babraham.yaml"
+#elif search("[headstone|pebble]", host) and getpass.getuser()=="stephen":
+#    configfile: "config_stephen_babraham.yaml"
+#elif search("VirtualBox", host) and getpass.getuser()=="lucas":
+#	configfile: "config_lucas.yaml" 
+#else:
+#    print("Computer not recognised")
+#    exit()
 
 # validate(config, schema="schemas/config.schema.yaml")
+
+configfile: "config_lucas.yaml" 
+
+#LJK-added-230419
+#a little script to provide all given celltype combinations
+#import itertools
+#celltyp = ["Epiblast", "Primitive_Streak", "PGC", "Gut", "Nascent_mesoderm", "Mixed_mesoderm", "ExE_mesoderm", "Mesenchyme", "Haematoendothelial_progenitors", "Blood_progenitors_1", "Blood_progenitors_2", "Rostral_neurectoderm"]
+#celltype_combs = []
+#for x in itertools.combinations(celltyp, 2):
+#	celltype_combs.append("%s_vs_%s" %(x[0],x[1]))
 
 #############################################
 ## Wildcard constraints to avoid ambiguity ##
@@ -111,20 +123,27 @@ rule all:
         expand(config["directories"]["results"]+"/rna/differential/cells/celltype/{celltypeA}_vs_{celltypeB}.txt.gz", filtered_product_celltypes, celltypeA=config["celltypes"][0], celltypeB=config["celltypes"]),
         expand(config["directories"]["results"]+"/rna/differential/metacells/celltype/{celltypeA}_vs_{celltypeB}.txt.gz", filtered_product_celltypes, celltypeA=config["celltypes"][0], celltypeB=config["celltypes"]),
         expand(config["directories"]["results"]+"/rna/differential/pseudobulk/celltype/{celltypeA}_vs_{celltypeB}.txt.gz", filtered_product_celltypes, celltypeA=config["celltypes"][0], celltypeB=config["celltypes"]),
+        
+        #LJK-modify-230419
+        # creates a bit too much combinations
+#        expand(config["directories"]["results"]+"/rna/differential/cells/celltype/{celltypeCombi}.txt.gz", filtered_product_celltypes, celltypeCombi = celltype_combs),
+#        expand(config["directories"]["results"]+"/rna/differential/metacells/celltype/{celltypeCombi}.txt.gz", filtered_product_celltypes, celltypeCombi = celltype_combs),
+#        expand(config["directories"]["results"]+"/rna/differential/pseudobulk/celltype/{celltypeCombi}.txt.gz", filtered_product_celltypes, celltypeCombi = celltype_combs),
     
         # Parse differential expression results
         config["directories"]["results"]+"/rna/differential/cells/celltype/parsed/diff_expr_results.txt.gz",
         config["directories"]["results"]+"/rna/differential/metacells/celltype/parsed/diff_expr_results.txt.gz",
         config["directories"]["results"]+"/rna/differential/pseudobulk/celltype/parsed/diff_expr_results.txt.gz",
-        config["directories"]["results"]+"/rna/differential/pseudobulk/celltype_genotype/parsed/diff_expr_results.txt.gz",
+        #config["directories"]["results"]+"/rna/differential/pseudobulk/celltype_genotype/parsed/diff_expr_results.txt.gz",
 
         # Extract TFs from differential analysis
         config["directories"]["results"] + "/rna/differential/cells/celltype/parsed/diff_expr_results_tfs.txt.gz",
         config["directories"]["results"] + "/rna/differential/metacells/celltype/parsed/diff_expr_results_tfs.txt.gz",
         config["directories"]["results"] + "/rna/differential/pseudobulk/celltype/parsed/diff_expr_results_tfs.txt.gz",
-
+	#LJK-230411-modify
+	#dont have genotypes
         # Differential expression between genotypes
-        expand(config["directories"]["results"]+"/rna/differential/pseudobulk/celltype_genotype/{diff_celltype_genotype}.txt.gz", diff_celltype_genotype=config["celltypes"]),
+        # expand(config["directories"]["results"]+"/rna/differential/pseudobulk/celltype_genotype/{diff_celltype_genotype}.txt.gz", diff_celltype_genotype=config["celltypes"]),
 
         # Marker genes
         # config["directories"]["results"]+"/rna/differential/cells/celltype/parsed/marker_genes_all.txt.gz",
@@ -299,7 +318,9 @@ rule doublet_detection:
         mem_mb = config["slurm"]["doublet_detection"]["memory"]
     shell:
         "Rscript {input.script} --metadata {input.metadata} --sce {input.sce} --samples {wildcards.sample} \
-        --hybrid_score_threshold {wildcards.doublet_score_threshold}  --outfile {output} > {log}"
+        --doublet_score_threshold {wildcards.doublet_score_threshold}  --outfile {output} > {log}"
+      	#LJK-modify-230329
+      	#was set to '--hybrid_score_threshold' but the script has function '--doublet_score_threshold' and doesnt recognize it and crashes. modified it to the latter
 
 rule parse_doublet_results:
     input:
@@ -351,6 +372,9 @@ rule plot_stats_per_sample:
 ## Mapping to the atlas ##
 ##########################
 
+# LJK-modify-230331
+# activated the '--use_marker_genes'
+
 rule mapping_mnn:
     input:
         atlas_sce = config["directories"]["atlas"]+"/processed/SingleCellExperiment.rds",
@@ -376,7 +400,7 @@ rule mapping_mnn:
     shell:
         "Rscript {input.script} --query_samples {wildcards.sample} --atlas_stages {params.atlas_stages} --query_sce {input.query_sce} \
         --atlas_sce {input.atlas_sce} --atlas_metadata {input.atlas_metadata} --query_metadata {input.query_metadata} \
-        --npcs {params.npcs} --n_neighbours {params.n_neighbours} --outfile {output} > {log}"
+        --npcs {params.npcs} --n_neighbours {params.n_neighbours} --outfile {output} --use_marker_genes > {log}"
 
 rule mapping_seurat:
     input:
@@ -426,10 +450,67 @@ rule parse_mapping_results:
     shell:
         "Rscript {input.script} --metadata {input.query_metadata} --mapping_mnn {input.mapping_mnn} --outfile {output} > {log}"
         # "Rscript {input.script} --metadata {input.query_metadata} --mapping_seurat {input.mapping_seurat} --mapping_mnn {input.mapping_mnn} --outfile {output} > {log}"
+		
+#LJK-230426-added
+#a new rule with the agruelatte data as input, instead of Pijuan
+#might have to change the script later, lets see the outut now
+#same goes for the params.
+
+rule mapping_mnn_agr:
+    input:
+        atlas_sce = config["directories"]["agr_atlas"]+"/data/processed/rna/SingleCellExperiment.rds",
+    	atlas_metadata = config["directories"]["agr_atlas"]+"/data/sample_metadata.txt.gz", 
+        query_sce = rules.seurat_to_sce.output,
+        query_metadata = rules.parse_doublet_results.output,
+        script = config["scripts"]["agr_mapping_mnn"] 
+    output:
+        config["directories"]["results"]+"/rna/agr_mapping/agr_mapping_mnn_{sample}.txt.gz"
+    params:
+        # sample = expand("{sample}", sample=config["samples"]),
+        atlas_stages=config["mapping_mnn_agr"]["atlas_stages"],
+        npcs = config["mapping_mnn_agr"]["npcs"],
+        n_neighbours = config["mapping_mnn_agr"]["n_neighbours"]
+    conda:
+        "environment.yaml"
+    log: 
+        "logs/agr_mapping_mnn_{sample}.log"
+    threads: 
+        config["slurm"]["mapping_mnn"]["threads"]
+    resources:
+        mem_mb = config["slurm"]["mapping_mnn"]["memory"]
+    shell:
+        "Rscript {input.script} --query_samples {wildcards.sample} --atlas_stages {params.atlas_stages} --query_sce {input.query_sce} \
+        --atlas_sce {input.atlas_sce} --atlas_metadata {input.atlas_metadata} --query_metadata {input.query_metadata} \
+        --npcs {params.npcs} --n_neighbours {params.n_neighbours} --outfile {output} --use_marker_genes > {log}"
+
+rule parse_mapping_results_agr:
+    input:
+        query_metadata = rules.parse_doublet_results.output,
+        # mapping_seurat = expand(config["directories"]["results"]+"/rna/mapping/mapping_seurat_{sample}.txt.gz", sample=config["samples"]),
+        mapping_mnn_agr = expand(config["directories"]["results"]+"/rna/agr_mapping/agr_mapping_mnn_{sample}.txt.gz", sample=config["samples"]),
+        # mapping_seurat = rules.mapping_seurat.output,
+        # mapping_mnn = rules.mapping_mnn.output,
+        script = config["scripts"]["parse_mapping"]
+    output:
+        config["directories"]["results"]+"/rna/agr_mapping/sample_metadata_after_mapping.txt.gz"
+    conda:
+        "environment.yaml"
+    log: 
+        "logs/parse_mapping_results.log"
+    threads: 
+        config["slurm"]["parse_mapping_results"]["threads"]
+    resources:
+        mem_mb = config["slurm"]["parse_mapping_results"]["memory"]
+    shell:
+        "Rscript {input.script} --metadata {input.query_metadata} --mapping_mnn {input.mapping_mnn_agr} --outfile {output} > {log}"
+        # "Rscript {input.script} --metadata {input.query_metadata} --mapping_seurat {input.mapping_seurat} --mapping_mnn {input.mapping_mnn} --outfile {output} > {log}"
 
 ##############################
 ## Dimensionality reduction ##
 ##############################
+
+#LJK-modify-230405
+#added the dimred_sce_npcs/features to params as there was only on there anyway and was messing around with the wildcards.
 
 rule dimensionality_reduction_sce: 
     input:
@@ -437,23 +518,25 @@ rule dimensionality_reduction_sce:
         sce = rules.seurat_to_sce.output,
         metadata = rules.parse_mapping_results.output
     output:
-        config["directories"]["results"]+"/rna/dimensionality_reduction/sce/batch_correction_{batch_variable}_remove_ExE_cells_{remove_ExE_cells}/pca_features{dimred_sce_features}_pcs{dimred_sce_npcs}.txt.gz"
+        config["directories"]["results"]+"/rna/dimensionality_reduction/sce/batch_correction_{batch_variable}_remove_ExE_cells_{remove_ExE_cells}/pca_features2500_pcs50.txt.gz"
     params:
         outdir = config["directories"]["results"]+"/rna/dimensionality_reduction/sce/batch_correction_{batch_variable}_remove_ExE_cells_{remove_ExE_cells}",
         n_neighbors = config["dimensionality_reduction_sce"]["n_neighbors"],
         min_dist = config["dimensionality_reduction_sce"]["min_dist"],
         vars_to_regress = config["dimensionality_reduction_sce"]["vars_to_regress"],
-        colour_by = config["dimensionality_reduction_sce"]["colour_by"]
+        colour_by = config["dimensionality_reduction_sce"]["colour_by"],
+        dimred_sce_npcs = config["dimensionality_reduction_sce"]["npcs"],
+        dimred_sce_features = config["dimensionality_reduction_sce"]["features"]
     conda:
         "environment.yaml"
     log: 
-        "logs/dimensionality_reduction_features{dimred_sce_features}_pcs{dimred_sce_npcs}_batch_correction_{batch_variable}_remove_ExE_cells{remove_ExE_cells}.log"
+        "logs/dimensionality_reduction_features2500_pcs50_batch_correction_{batch_variable}_remove_ExE_cells{remove_ExE_cells}.log"
     threads: 
         config["slurm"]["dimensionality_reduction_sce"]["threads"]
     resources:
         mem_mb = config["slurm"]["dimensionality_reduction_sce"]["memory"]
     shell:
-        "Rscript {input.script} --sce {input.sce} --metadata {input.metadata} --npcs {wildcards.dimred_sce_npcs} --features {wildcards.dimred_sce_features} \
+        "Rscript {input.script} --sce {input.sce} --metadata {input.metadata} --npcs {params.dimred_sce_npcs} --features {params.dimred_sce_features} \
         --vars_to_regress {params.vars_to_regress}  --remove_ExE_cells {wildcards.remove_ExE_cells} --batch_variable {wildcards.batch_variable} \
         --n_neighbors {params.n_neighbors} --min_dist {params.min_dist} --colour_by {params.colour_by} --outdir {params.outdir} > {log}"
 
@@ -561,6 +644,29 @@ rule plot_mapping_results:
         "Rscript {input.script} --query_metadata {input.query_metadata} --atlas_metadata {input.atlas_metadata} \
         --samples {params.samples} --outdir {params.outdir} > {log}"
 
+rule plot_mapping_results_agr: 
+    input: 
+        script = config["scripts"]["plot_mapping_results_agr"],
+        query_metadata=rules.parse_mapping_results_agr.output,
+        atlas_metadata = config["directories"]["agr_atlas"]+"/data/sample_metadata.txt.gz",
+        atlas_coords = config["directories"]["agr_atlas"] + "/results/rna/dimensionality_reduction/cells/sce/batch_correction_sample_remove_ExE_cells_False/umap_features2500_pcs50_neigh25_dist0.5.txt.gz"
+    output:
+        config["directories"]["results"]+"/rna/mapping/pdf_agr/umap_mapped_allcells.pdf"
+    params:
+        samples = expand("{sample}", sample=config["samples"]),
+        outdir = config["directories"]["results"]+"/rna/mapping/pdf_agr"
+    conda:
+        "environment.yaml"
+    log: 
+        "logs/plot_mapping_results.log"
+    threads: 
+        config["slurm"]["plot_mapping_results"]["threads"]
+    resources:
+        mem_mb = config["slurm"]["plot_mapping_results"]["memory"]        
+    shell:
+        "Rscript {input.script} --query_metadata {input.query_metadata} --atlas_metadata {input.atlas_metadata} --atlas_umap {input.atlas_coords} \
+        --samples {params.samples} --outdir {params.outdir} > {log}"
+
 ####################
 ## Create anndata ##
 ####################
@@ -573,7 +679,7 @@ rule convert_SingleCellExperiment_to_anndata:
     output:
         config["directories"]["processed_data"] + "/anndata.h5ad"
     # params:
-    #     python = config["resources"]["python"]
+    #    python = config["resources"]["python"]
     conda:
         "environment.yaml"
     log: 
@@ -583,7 +689,7 @@ rule convert_SingleCellExperiment_to_anndata:
     resources: 
         mem_mb = config["slurm"]["convert_SingleCellExperiment_to_anndata"]["memory"]
     shell:
-        # "Rscript {input.script} --python_path {params.python} --sce {input.sce} --metadata {input.metadata} --outfile {output} > {log}"
+       # "Rscript {input.script} --python_path {params.python} --sce {input.sce} --metadata {input.metadata} --outfile {output} > {log}"
         "Rscript {input.script} --sce {input.sce} --metadata {input.metadata} --outfile {output} > {log}"
 
 ################
@@ -601,7 +707,8 @@ rule pseudobulk_rna:
         stats = config["directories"]["results"]+"/rna/pseudobulk/{group_by}/stats.txt"
     params:
         normalisation_method = config["pseudobulk_rna"]["normalisation_method"],
-        outdir = config["directories"]["results"]+"/rna/pseudobulk/{group_by}"
+        outdir = config["directories"]["results"]+"/rna/pseudobulk/{group_by}",
+        genotype = config["pseudobulk_rna"]["genotype"]
     conda:
         "environment.yaml"
     log: 
@@ -667,7 +774,7 @@ rule run_metacells:
     resources: 
         mem_mb = config["slurm"]["run_metacells"]["memory"]
     shell:
-        # "{params.python} {input.script} --anndata {input.anndata} --metadata {input.metadata} --samples {wildcards.sample_metacell} \
+        # "{params.python} {input.script} --anndata {input.anndata} --metadata {input.metadata} --samples {wildcards.sample_metacell}" \
         "python {input.script} --anndata {input.anndata} --metadata {input.metadata} --samples {wildcards.sample_metacell} \
         --percent_metacells {params.percent_metacells} --n_pcs {params.n_pcs} --n_features {params.n_features} --outdir {params.outdir} > {log}"
 
@@ -754,6 +861,20 @@ rule aggregate_rna_metacells_trajectory:
         "Rscript {input.script} --python {params.python} --sce {input.sce} --metadata {input.metadata} --cell2metacell {input.cell2metacell} \
         --metacell_min_reads {params.metacell_min_reads} --normalisation_method {params.normalisation_method} \
         --outdir {params.outdir} > {log}"
+
+rule agr_celltometacell_assignment:
+    input:
+        script = config["scripts"]["agr_celltometacell"],
+        cell2metacell = config["directories"]["results"] + "/rna/metacells/all_cells/{samples}/cell2metacell_assignment.txt.gz",
+        arg_mapping_metadata = rules.parse_mapping_results_agr.output,
+    output:
+        agr_cell2metacell = config["directories"]["results"] + "/rna/metacells/all_cells/{samples}/agr_cell2metacell_assignment.txt.gz"
+    conda:
+        "environment.yaml"
+    log:
+        "logs/agr_celltometacell_assignment_{samples}.log"
+    shell:
+        "Rscript {input.script} --mapping_metadata {input.arg_mapping_metadata} --metacell_assignment {input.cell2metacell} --ouput {ouput.agr_cell2metacell}"
 
 ############################### 
 ## Extract TF RNA expression ##
@@ -846,6 +967,29 @@ rule plot_celltype_proportions:
         samples = expand("{sample}", sample=config["samples"]),
         celltype_label = config["plot_celltype_proportions"]["celltype_label"],
         outdir = config["directories"]["results"]+"/rna/celltype_proportions"
+    conda:
+        "environment.yaml"
+    log: 
+        "logs/plot_celltype_proportions.log"
+    threads: 
+        config["slurm"]["plot_celltype_proportions"]["threads"]
+    resources:
+        mem_mb = config["slurm"]["plot_celltype_proportions"]["memory"]        
+    shell:
+        "Rscript {input.script} --metadata {input.metadata} --celltype_label {params.celltype_label} \
+        --samples {params.samples} --outdir {params.outdir} > {log}"
+        
+rule mapping_celltype_proportions: 
+    input:
+        script = config["scripts"]["mapping_celltype_proportions"],
+        metadata=rules.parse_mapping_results_agr.output
+    output:
+        config["directories"]["results"]+"/rna/celltype_proportions/celltype_proportions_stacked_barplots.pdf"
+        # expand(config["directories"]["results"]+"/rna/celltype_proportions/celltype_proportions_{stage}_horizontal_barplots.pdf", stage=config["stages"])
+    params:
+        samples = expand("{sample}", sample=config["samples"]),
+        celltype_label = config["plot_celltype_proportions"]["celltype_label"],
+        outdir = config["directories"]["results"]+"/rna/celltype_proportions/agr_mapping"
     conda:
         "environment.yaml"
     log: 
@@ -1244,38 +1388,38 @@ rule parse_differential_celltype_pseudobulk:
 ## Differential expression between genotypes ##
 ###############################################
 
-rule differential_celltype_genotype_pseudobulk: 
-    input:
-        script = config["scripts"]["differential_celltype_genotype_pseudobulk"],
-        sce = expand(rules.pseudobulk_rna_with_replicates.output.sce, group_by="celltype_genotype")
-    output:
-        config["directories"]["results"]+"/rna/differential/pseudobulk/celltype_genotype/{diff_celltype_genotype}.txt.gz"
-    log: 
-        "logs/differential_celltype_genotype_pseudobulk_{diff_celltype_genotype}.log"
-    threads: 
-        config["slurm"]["differential_pseudobulk"]["threads"]
-    resources:
-        mem_mb = config["slurm"]["differential_pseudobulk"]["memory"]
-    shell:
-        "Rscript {input.script} --sce {input.sce} --celltypes {wildcards.diff_celltype_genotype} --groupA WT --groupB T_KO --outfile {output} > {log}"
-
-rule parse_differential_celltype_genotype_pseudobulk: 
-    input:
-        expand(rules.differential_celltype_genotype_pseudobulk.output, diff_celltype_genotype=config["celltypes"]),
-        script = config["scripts"]["parse_differential_celltype_genotype_pseudobulk"]
-    output:
-        config["directories"]["results"]+"/rna/differential/pseudobulk/celltype_genotype/parsed/diff_expr_results.txt.gz"
-    params:
-        diff_results_dir = config["directories"]["results"]+"/rna/differential/pseudobulk/celltype_genotype"
-    log: 
-        "logs/parse_differential_celltype_genotype_pseudobulk.log"
-    threads: 
-        config["slurm"]["parse_differential_celltype"]["threads"]
-    resources:
-        mem_mb = config["slurm"]["parse_differential_celltype"]["memory"]
-    shell:
-        "Rscript {input.script} --diff_results_dir {params.diff_results_dir} --outfile {output} > {log}"
-
+#rule differential_celltype_genotype_pseudobulk: 
+#    input:
+#        script = config["scripts"]["differential_celltype_genotype_pseudobulk"],
+#        sce = expand(rules.pseudobulk_rna_with_replicates.output.sce, group_by="celltype_genotype")
+#    output:
+#        config["directories"]["results"]+"/rna/differential/pseudobulk/celltype_genotype/{diff_celltype_genotype}.txt.gz"
+#    log: 
+#        "logs/differential_celltype_genotype_pseudobulk_{diff_celltype_genotype}.log"
+#    threads: 
+#        config["slurm"]["differential_pseudobulk"]["threads"]
+#    resources:
+#        mem_mb = config["slurm"]["differential_pseudobulk"]["memory"]
+#    shell:
+#        "Rscript {input.script} --sce {input.sce} --celltypes {wildcards.diff_celltype_genotype} --groupA WT --groupB T_KO --outfile {output} > {log}"
+#
+#rule parse_differential_celltype_genotype_pseudobulk: 
+#    input:
+#        expand(rules.differential_celltype_genotype_pseudobulk.output, diff_celltype_genotype=config["celltypes"]),
+#        script = config["scripts"]["parse_differential_celltype_genotype_pseudobulk"]
+#    output:
+#        config["directories"]["results"]+"/rna/differential/pseudobulk/celltype_genotype/parsed/diff_expr_results.txt.gz"
+#    params:
+#        diff_results_dir = config["directories"]["results"]+"/rna/differential/pseudobulk/celltype_genotype"
+#    log: 
+#        "logs/parse_differential_celltype_genotype_pseudobulk.log"
+#    threads: 
+#        config["slurm"]["parse_differential_celltype"]["threads"]
+#    resources:
+#        mem_mb = config["slurm"]["parse_differential_celltype"]["memory"]
+#    shell:
+#        "Rscript {input.script} --diff_results_dir {params.diff_results_dir} --outfile {output} > {log}"
+#
 
 ############################################
 ## Extract TFs from differential analysis ##

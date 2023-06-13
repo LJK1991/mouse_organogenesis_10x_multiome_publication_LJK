@@ -3,38 +3,39 @@
 ## Global variables ##
 ######################
 
-samples: ["E7.5_rep1", "E7.5_rep2", "E7.75_rep1", "E8.0_rep1", "E8.0_rep2", "E8.5_rep1", "E8.5_rep2", "E8.75_rep1", "E8.75_rep2", "E8.5_CRISPR_T_KO", "E8.5_CRISPR_T_WT"]
+samples: ["Day_4_L","Day_4_R"]
 reference_samples: ["E7.5_rep1", "E7.5_rep2", "E7.75_rep1", "E8.0_rep1", "E8.0_rep2", "E8.5_rep1", "E8.5_rep2", "E8.75_rep1", "E8.75_rep2"]
-wt_ko_samples: ["E8.5_CRISPR_T_KO", "E8.5_CRISPR_T_WT"]
+#wt_ko_samples: ["E8.5_CRISPR_T_KO", "E8.5_CRISPR_T_WT"]
 celltypes: ["Epiblast", "Primitive_Streak", "Caudal_epiblast", "PGC", "Anterior_Primitive_Streak", "Notochord", "Def._endoderm", "Gut", "Nascent_mesoderm", "Mixed_mesoderm", "Intermediate_mesoderm", "Caudal_Mesoderm", "Paraxial_mesoderm", "Somitic_mesoderm", "Pharyngeal_mesoderm", "Cardiomyocytes", "Allantois", "ExE_mesoderm", "Mesenchyme", "Haematoendothelial_progenitors", "Endothelium", "Blood_progenitors_1", "Blood_progenitors_2", "Erythroid1", "Erythroid2", "Erythroid3", "NMP", "Rostral_neurectoderm", "Caudal_neurectoderm", "Neural_crest", "Forebrain_Midbrain_Hindbrain", "Spinal_cord", "Surface_ectoderm", "Visceral_endoderm", "ExE_endoderm", "ExE_ectoderm", "Parietal_endoderm"]
-stages: ["E7.5","E7.75","E8.0","E8.5","E8.75"]
-trajectories: ["nmp"]
+stages: ["E7.5"]
+trajectories: ["Heamo","Mesen","HeaMen"]
 
 #################
 ## Directories ##
 #################
 
 directories:
-    base: /bi/group/reik/ricard/data/gastrulation_multiome_10x
-    original_data: /bi/group/reik/ricard/data/gastrulation_multiome_10x/original
-    processed_data: /bi/group/reik/ricard/data/gastrulation_multiome_10x/test/processed/rna
-    results: /bi/group/reik/ricard/data/gastrulation_multiome_10x/test/results
+    base: /home/lucas/Documents/Work/agrAnalysis/
+    original_data: /home/lucas/Documents/Work/agrAnalysis/data/original
+    processed_data: /home/lucas/Documents/Work/agrAnalysis/data/processed/rna
+    results: /home/lucas/Documents/Work/agrAnalysis/results
     # processed_data: /bi/group/reik/ricard/data/gastrulation_multiome_10x/processed/rna
     # results: /bi/group/reik/ricard/data/gastrulation_multiome_10x/results
-    atlas: /bi/group/reik/ricard/data/pijuansala2019_gastrulation10x
+    atlas: /home/lucas/Documents/Work/agrAnalysis/Pijuan
+    agr_atlas: /home/lucas/Documents/Work/mouse_ATAC/ftp1.babraham.ac.uk
 
 ###############
 ## Resources ##
 ###############
 
 resources:
-    python: /bi/group/reik/ricard/software/miniconda3/envs/main/bin/python
+    python: /home/lucas/mambaforge/envs/snakemake/bin/python
     # marker_genes: /bi/group/reik/ricard/data/pijuansala2019_gastrulation10x/results/marker_genes/all_stages/marker_genes.txt.gz
     # TFs_file: "/bi/group/reik/ricard/data/mm10_regulation/TFs/TFs.txt"
-    TFs_file: "/bi/group/reik/ricard/data/mm10_regulation/TFs/TFs.txt"
-    cell_metadata: "/bi/group/reik/ricard/data/gastrulation_multiome_10x/results/atac/archR/celltype_assignment/sample_metadata_after_celltype_assignment.txt.gz"
-    mm10_mask: /bi/group/reik/ricard/data/mm10_sequence/repeats/mm10_rmsk.gtf
-    genes_gtf: /bi/scratch/Stephen_Clark/annotations/gtf/Mus_musculus.GRCm38.98.gtf
+    TFs_file: "/home/lucas/Documents/Work/agrAnalysis/TFs.txt" #obtained from Ricard
+    cell_metadata: "/home/lucas/Documents/Work/mouse_ATAC/ftp1.babraham.ac.uk/results/atac/archR/celltype_assignment/sample_metadata_after_celltype_assignment.txt.gz" #how does this work?
+    mm10_mask: /home/lucas/Documents/Work/multiome/mm10_rmsk.gtf #used the one in the multiome folder
+    genes_gtf: /home/lucas/Documents/Work/agrAnalysis/genes.gtf #changed it
 
 #############
 ## Scripts ##
@@ -54,6 +55,7 @@ scripts:
     mapping_mnn: ../mapping/run/mnn/mapping_mnn.R
     mapping_seurat: ../mapping/run/seurat/mapping_seurat.R
     parse_mapping: ../mapping/run/parse_sample_metadata_after_mapping.R
+    agr_mapping_mnn: ../mapping/run/mnn_agr/mapping_mnn.R
 
     # dimensionality reduction
     dimensionality_reduction_sce: ../dimensionality_reduction/dimensionality_reduction_sce.R
@@ -70,6 +72,8 @@ scripts:
     # mapping
     plot_mapping_results: ../mapping/analysis/plot_mapping_umap.R
     plot_celltype_proportions: ../celltype_proportions/plot_celltype_proportions.R
+    plot_mapping_results_agr: ../mapping/analysis/plot_mapping_umap_agr.R
+    mapping_celltype_proportions: ../lucask/mapping_cell_proportions.R
 
     # TF2gene coexpression
     infer_trajectories: ../trajectories/infer_trajectory.R
@@ -81,6 +85,7 @@ scripts:
     run_metacells_trajectory: ../metacells/run/run_metacell_trajectory.py
     aggregate_rna_metacells: ../metacells/run/aggregate_rna_metacell.R
     coexpression_TF_vs_gene_metacells: ../TF2gene_coexpression/coexpression_TF_vs_gene_metacells.R
+    agr_celltometacell: ../lucask/agr_cell2metacell_assignment.R
 
     # differential expression between cell types
     differential_celltype_cells: ../differential/cells/differential.R
@@ -123,8 +128,10 @@ scripts:
 
 pseudobulk_rna:
     # group_by: ["sample", "celltype_mnn", "celltype_seurat"]
-    group_by: ["celltype", "sample", "celltype_genotype"]
+    # group_by: ["celltype", "sample", "celltype_genotype"]
+    group_by: ["celltype"]
     normalisation_method: "cpm"
+    genotype: "mESC_129"
     
 pseudobulk_rna_with_replicates:
     nrep: 5
@@ -135,21 +142,29 @@ doublet_detection:
     doublet_score_threshold: 1.25
 
 mapping_mnn:
-    atlas_stages: ["E6.5","E6.75","E7.0","E7.25","E7.5","E7.75","E8.0","E8.25","E8.5"]
+    atlas_stages: ["E6.5","E6.75","E7.0","E7.25","E7.5","E7.75"]
+    npcs: 50
+    n_neighbours: 25
+
+mapping_mnn_agr:
+    atlas_stages: ["E7.5","E7.75"]
     npcs: 50
     n_neighbours: 25
 
 mapping_seurat:
-    atlas_stages: ["E6.5","E6.75","E7.0","E7.25","E7.5","E7.75","E8.0","E8.25","E8.5"]
+    atlas_stages: ["E6.5","E6.75","E7.0","E7.25","E7.5","E7.75"]
     npcs: 50
     n_neighbours: 25
 
 qc:
     min_nFeature_RNA: 2000
-    max_nFeature_RNA: 10000
-    percent_mt: 40
-    percent_rib: 20
+    max_nFeature_RNA: 15000 #Lucas: originally 10000
+    percent_mt: 20 #Lucas: originally 40
+    percent_rib: 35 #Lucas: did not even know you could do this have to check the right parameter, taking 35 as ridvan loses alot
 
+#LJK-modify-230402
+#assuming celltype_mnn is the same as celltype.score (made when mapping)
+#changed it in the colour_by section
 dimensionality_reduction_sce:
     npcs: 50
     features: 2500
@@ -158,8 +173,8 @@ dimensionality_reduction_sce:
     vars_to_regress: ["nFeature_RNA"]
     batch_variable: ["sample","None"]
     remove_ExE_cells: ["True","False"]
-    # colour_by: ["sample", "stage", "celltype_mnn", "celltype_seurat", "doublet_score", "doublet_call", "nFeature_RNA"]
-    colour_by: ["sample", "stage", "celltype", "nFeature_RNA"]
+    # colour_by: ["sample", "stage", "celltype.score", "celltype_seurat", "doublet_score", "doublet_call", "nFeature_RNA"]
+    colour_by: ["celltype", "nFeature_RNA","mapping_mnn","doublet_score","doublet_call"]
 
 dimensionality_reduction_seurat:
     npcs: 50
@@ -169,9 +184,9 @@ dimensionality_reduction_seurat:
     seed: 42
     vars_to_regress: ["nFeature_RNA"]
     batch_variable: ["sample"]
-    remove_ExE_cells: ["True","False"]
+    remove_ExE_cells: ["True","False"] 
     # vars_to_regress: ["nFeature_RNA","mitochondrial_percent_RNA"]
-    colour_by: ["sample", "stage", "celltype", "nFeature_RNA"]
+    colour_by: ["celltype", "nFeature_RNA"]
 
 celltype_validation_single_cells:
     celltype_label: "celltype"
@@ -184,7 +199,7 @@ plot_celltype_proportions:
 
 infer_trajectories:
     # trajectory_name: ["blood", "ectoderm", "endoderm", "mesoderm"]
-    trajectory_name: ["blood"]
+    trajectory_name: ["Haemo","Mesen","HeaMen"]
     celltype_label: "celltype"
 
 # coexpression_TF_vs_gene_trajectories
@@ -198,32 +213,36 @@ run_metacells_trajectory:
     percent_metacells: 0.05
     n_features: 1500
     n_pcs: 15
-    trajectories: ["nmp"]
+    trajectories: ["Haemo","Mesen","HeaMen"]
 
 aggregate_rna_metacells:
     metacell_min_reads: 25000
     normalisation_method: "cpm"
 
+
 differential_celltype_cells:
     group_variable: ["celltype"]
     min_cells: 25
 
+#LJK-modify-230419
+#changed minimum cells per group to 3 from 5. as my smalles group of metacells is 3 large
 differential_celltype_metacells:
     group_variable: ["celltype"]
-    min_cells: 5
+    min_cells: 3
 
 differential_genotype_metacells:
     group_variable: ["genotype"]
-    min_cells: 5
+    min_cells: 3
 
 differential_genotype_pseudobulk:
     min_cells: 50
 
-differential_genotype:
-    group_variable: ["genotype"]
-    ko_class: "T_KO"
-    wt_class: "WT"
-    min_cells: 50
+#think this will just give errors
+#differential_genotype:
+#    group_variable: ["genotype"]
+#    ko_class: "T_KO"
+#    wt_class: "WT"
+#    min_cells: 50
 
 tf2gene_cor:
     cor_test: ["pearson","spearman"]
@@ -241,6 +260,8 @@ define_marker_TFs:
 ###########
 ## Slurm ##
 ###########
+
+#not sure how to factor these in
 
 slurm:  # memory in MB
     create_seurat: 

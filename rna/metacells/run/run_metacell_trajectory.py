@@ -10,14 +10,19 @@ import SEACells
 ## Load default settings ##
 ###########################
 
-if search("BI2404M", os.uname()[1]):
-    exec(open('/Users/argelagr/gastrulation_multiome_10x/settings.py').read())
-    exec(open('/Users/argelagr/gastrulation_multiome_10x/utils.py').read())
-elif search("pebble|headstone", os.uname()[1]):
-    exec(open('/bi/group/reik/ricard/scripts/gastrulation_multiome_10x/settings.py').read())
-    exec(open('/bi/group/reik/ricard/scripts/gastrulation_multiome_10x/utils.py').read())
-else:
-    exit("Computer not recognised")
+#LJK-modify-230410
+#removed recognition and just added file.paths
+#if search("BI2404M", os.uname()[1]):
+#    exec(open('/Users/argelagr/gastrulation_multiome_10x/settings.py').read())
+#    exec(open('/Users/argelagr/gastrulation_multiome_10x/utils.py').read())
+#elif search("pebble|headstone", os.uname()[1]):
+#    exec(open('/bi/group/reik/ricard/scripts/gastrulation_multiome_10x/settings.py').read())
+#    exec(open('/bi/group/reik/ricard/scripts/gastrulation_multiome_10x/utils.py').read())
+#else:
+#    exit("Computer not recognised")
+    
+exec(open('/home/lucas/Documents/git/mouse_organogenesis_10x_multiome_publication/settings.py').read())
+exec(open('/home/lucas/Documents/git/mouse_organogenesis_10x_multiome_publication/utils.py').read())
 
 ################################
 ## Initialise argument parser ##
@@ -63,22 +68,34 @@ args["outdir"] = Path(args["outdir"])
 sc.settings.figdir = args["outdir"] / "pdf"
 
 # Options
+#LJK-modify-230410
+#changed trajectory specifications.
 if args["trajectory"]=="nmp":
   # args["samples"] = ["E8.5_CRISPR_T_KO", "E8.5_CRISPR_T_WT"]
   opts["samples"] = ["E8.0_rep1", "E8.0_rep2", "E8.5_rep1", "E8.5_rep2", "E8.75_rep1", "E8.75_rep2", "E8.5_CRISPR_T_KO", "E8.5_CRISPR_T_WT"]
   opts["celltypes"] = ["Caudal_Mesoderm", "Somitic_mesoderm", "NMP", "Spinal_cord"]
+elif args["trajectory"]=="Haemo":
+  opts["samples"] = ["Day_4_L","Day_4_R"]
+  opts["celltypes"] = ["Epiblast","PGC","Primitive_Streak","Nascent_mesoderm","Mixed_mesoderm","Haematoendothelial_progenitors","Blood_progenitors_1","Blood_progenitors_2"]
+elif args["trajectory"]=="Mesen":
+  opts["samples"] = ["Day_4_L","Day_4_R"]
+  opts["celltypes"] = ["Epiblast","PGC","Primitive_Streak","Nascent_mesoderm","Mixed_mesoderm","Mesenchyme"]
+elif args["trajectory"]=="HeaMen":
+  opts["samples"] = ["Day_4_L","Day_4_R"]
+  opts["celltypes"] = ["Nascent_mesoderm","Mixed_mesoderm","Mesenchyme","Haematoendothelial_progenitors"]
 else:
   print("Trajectory not known")
   exit()
 
 print("Infering metacells for %s trajectory..." % args["trajectory"])
 
+print(args["samples"])
+print(opts["samples"])
 if isinstance(args["samples"],list): 
   if args["samples"][0]=="all":
     args["samples"] = opts["samples"]
   else:
     assert set(args["samples"]).issubset(opts["samples"])
-
 else:
   print('args["samples"] has to be a list')
 
@@ -88,7 +105,20 @@ print(args)
 ## Load metadata ##
 ###################
 
-metadata = (pd.read_table(args["metadata"]) >>
+#LJK-modify-230406
+#added a piece to change celltype.mapped to celltype. (starting to think that during the mapping there should be a 'celltype' column instead.
+metadata = pd.read_table(args["metadata"])
+print(metadata.columns)
+new_columns = {}
+for name in metadata.columns:
+	if name == 'celltype.mapped':
+		new_columns[name] = 'celltype'
+	else:
+		new_columns[name] = name
+metadata.rename(columns=new_columns, inplace=True)
+print(metadata.columns)
+
+metadata = (metadata >>
     # mask(X["pass_rnaQC"]==True, X["pass_atacQC"]==True, X["doublet_call"]==False, X["celltype"].isin(opts["celltypes"])) >>
     mask(X["pass_rnaQC"]==True, X["doublet_call"]==False, X["celltype"].isin(opts["celltypes"])) >>
     mask(X["sample"].isin(args["samples"]))
@@ -118,6 +148,10 @@ adata.uns['celltype_colors'] = colPalette_celltypes
 #colPalette_stages = [opts["stages_colors"][i.replace(" ","_")] for i in sorted(np.unique(adata.obs['stage']))]
 #adata.uns['stage_colors'] = colPalette_stages
 
+#LJK-added-230419
+# testing out regression
+
+sc.pp.regress_out(adata, ['nFeature_RNA'])
 
 #######################
 ## Feature selection ##
@@ -140,8 +174,10 @@ sc.tl.pca(adata, n_comps=args["n_pcs"], svd_solver='arpack')
 # Plot PCA
 # sc.pl.pca(adata, components=[1,2], color=["celltype","stage"], size=25, legend_loc=None)
 
-# Batch effect correction
-sc.external.pp.harmony_integrate(adata,"stage", basis='X_pca', adjusted_basis='X_pca_harmony')
+# Batch effect correction 
+#LJK-modify-230414
+#perform batch correction on sample instead of stage.
+sc.external.pp.harmony_integrate(adata,"sample", basis='X_pca', adjusted_basis='X_pca_harmony')
 
 # Build kNN graph
 sc.pp.neighbors(adata, n_neighbors=25, use_rep='X_pca_harmony')
@@ -153,8 +189,10 @@ sc.pp.neighbors(adata, n_neighbors=25, use_rep='X_pca_harmony')
 # sc.pl.umap(adata, color=["celltype"], size=25, legend_loc=None, save=args["outdir"] / "pdf/umap.pdf")
 
 # Run Force Atlas
+#LJK-modify-230411
+#removed genotype from the draw_graph color options
 sc.tl.draw_graph(adata, layout='fa', init_pos=None)
-sc.pl.draw_graph(adata, color=["celltype","genotype","stage"], size=20, save="_trajectory.pdf")
+sc.pl.draw_graph(adata, color=["celltype","stage","sample"], size=20, save="_trajectory.pdf")
 
 ########################
 ## Fit metacell model ##
@@ -164,14 +202,19 @@ n_metacells = round(args["percent_metacells"] * adata.shape[0])
 
 print("Fitting SEACells with %d metacells..." % (n_metacells))
 
+#LJK-modify-230406
+#https://github.com/dpeerlab/SEACells/blob/main/SEACells/core.py
+#according to this it should be 'waypoint_proportion' instead of 'waypt_proportion'
+#somehow that doesnt work, but default is 1 anyway so will remove it instead.
+##looks like i have to run .construct_kernel matrix() before calling .fit, will have to ask later if this alters anything
 model = SEACells.core.SEACells(adata, 
                   build_kernel_on = 'X_draw_graph_fa', 
                   n_SEACells = n_metacells, 
                   n_waypoint_eigs=10,
-                  waypt_proportion=1,
                   convergence_epsilon = 1e-6)
-
-model.fit()
+model.construct_kernel_matrix()
+model.initialize_archetypes()
+model.fit(min_iter=10, max_iter=150)
 
 adata.obs[['SEACell']].head()
 
@@ -187,18 +230,23 @@ SEACells.plot.plot_2D(adata, key='X_draw_graph_fa', colour_metacells=False, save
 ## Aggregate counts and plot trajectory at the metacell level ##
 ################################################################
 
-adata_metacells = SEACells.core.summarize_by_SEACell(adata, SEACells_label='SEACell', summarize_layer='raw')
-adata_metacells.uns = adata.uns
-adata_metacells.obs = (adata.obs.loc[adata_metacells.obs.index] >> 
-    select(["sample","celltype","genotype"])
-)
+#test (added list capability)
+adata_metacells = SEACells.core.summarize_by_SEACell(adata, SEACells_label='SEACell',celltype_label=["celltype","sample"], summarize_layer='raw')
+#LJK-modify-230411
+#removed genotype from the select list
+#adata_metacells.obs = (adata.obs.loc[adata_metacells.obs.index] >> 
+#    select(["sample","celltype"])
+#)
+
 sc.pp.normalize_total(adata_metacells)
 sc.pp.log1p(adata_metacells)
 sc.pp.highly_variable_genes(adata_metacells, n_top_genes=1500)
 sc.tl.pca(adata_metacells, n_comps=10)
 sc.pp.neighbors(adata_metacells, n_neighbors=15, use_rep='X_pca')
 sc.tl.draw_graph(adata_metacells, layout="fa", init_pos=None)
-sc.pl.draw_graph(adata_metacells, color=["celltype","genotype"], size=150, save="_metacell_trajectory.pdf")
+#LJK-modify-230411
+#removed genotype from the draw_graph color options
+sc.pl.draw_graph(adata_metacells, color=["celltype","sample"], size=150, save="_metacell_trajectory.pdf")
 
 ##########
 ## Save ##

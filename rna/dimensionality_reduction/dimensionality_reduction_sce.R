@@ -16,8 +16,8 @@ p$add_argument('--metadata',        type="character",                           
 p$add_argument('--samples',         type="character",  default="all",              nargs='+',     help='Samples')
 p$add_argument('--stages',       type="character",  default="all",  nargs='+',  help='Stages to plot')
 p$add_argument('--celltypes',       type="character",  default="all",  nargs='+',  help='Cell types to plot')
-p$add_argument('--features',        type="integer",    default=1000,                help='Number of features')
-p$add_argument('--npcs',            type="integer",    default=30,                  help='Number of PCs')
+p$add_argument('--features',        type="character",    default=2500,                help='Number of features')
+p$add_argument('--npcs',            type="character",    default=50,                  help='Number of PCs')
 p$add_argument('--n_neighbors',     type="integer",    default=30,     help='(UMAP) Number of neighbours')
 p$add_argument('--min_dist',        type="double",     default=0.3,     help='(UMAP) Minimum distance')
 p$add_argument('--colour_by',       type="character",  default="celltype",  nargs='+',  help='Metadata columns to colour the UMAP by')
@@ -28,7 +28,12 @@ p$add_argument('--vars_to_regress', type="character",                nargs='+', 
 p$add_argument('--batch_variable',type="character",   default="None",                            help='Metadata column to apply batch correction on')
 # p$add_argument('--test',      action = "store_true",                       help='Testing mode')
 
+#LJK-added-230331
+#changed input of --npcs/--features from 'integer' to 'character' and below change them to integer.
+#R and snakemake were being annoying, couldnt figure it out and so this should work
 args <- p$parse_args(commandArgs(TRUE))
+args$features <- as.integer(args$features)
+args$npcs <- as.integer(args$npcs)
 
 ## START TEST ##
 # io$basedir <- file.path(io$basedir,"test")
@@ -93,8 +98,15 @@ if (args$batch_variable=="None") {
 ## Load sample metadata ##
 ##########################
 
+#LJK-modify-230402
+#changed celltype to celltype.mapped as previous functions have called it that instead of celltype
+
 sample_metadata <- fread(args$metadata) %>%
   .[pass_rnaQC==TRUE & doublet_call==FALSE & stage%in%args$stages & sample%in%args$samples & celltype%in%args$celltypes]
+
+#LJK-add-230402
+#added below function to change colname back to celltype so that in the rest of the script i dont have to change things
+#colnames(sample_metadata)[which(colnames(sample_metadata) == 'celltype.mapped')] <- 'celltype'
 
 if (args$remove_ExE_cells) {
   print("Removing ExE cells...")
@@ -109,7 +121,7 @@ table(sample_metadata$celltype)
 ###################
 ## Sanity checks ##
 ###################
-
+print(colnames(sample_metadata))
 stopifnot(args$colour_by %in% colnames(sample_metadata))
 # stopifnot(unique(sample_metadata$celltype) %in% names(opts$celltype.colors))
 
@@ -211,9 +223,13 @@ if (length(args$batch_variable)>0) {
       return(x[[1]])
     }
   })
-  
+  #LJK-230414-add
+  # i have only one stage, it gives an error saying 
+  # Error in .check_valid_batch(x, batch, byrow = byrow) : 
+  # 'batch' must be specified if '...' has only one object
+  # can provide 'batch' argument of a list of stages present in 'correct_list' if more than one will automatically ignore it
   # perform correction over stages
-  pca.corrected <- reducedMNN(correct_list, merge.order=1:length(correct_list))$corrected 
+  pca.corrected <- reducedMNN(correct_list, merge.order=1:length(correct_list), batch=rep(names(correct_list), dim(correct_list[[1]])[1]))$corrected 
   colnames(pca.corrected) <- paste0("PC",1:ncol(pca.corrected))
   rm(correct_list,pca_list)
   
@@ -272,10 +288,15 @@ for (i in args$colour_by) {
   if (is.numeric(to.plot[[i]])) {
     p <- p + scale_fill_gradientn(colours = terrain.colors(10))
   }
-  if (grepl("celltype",i)) {
+  #LJK-added-230405
+  #added a grepl for the celltype.score to prevent errors
+  #made it so legend is in plot
+  if (grepl("celltype.score",i)){
+    #nothings happens and continue
+  } else if (grepl("celltype",i)) {
     p <- p + scale_fill_manual(values=opts$celltype.colors) +
       theme(
-        legend.position="none",
+        legend.position="right",
         legend.title=element_blank()
       )
   }

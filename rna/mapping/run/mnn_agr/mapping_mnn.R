@@ -1,4 +1,4 @@
-here::i_am("rna/mapping/run/mnn/mapping_mnn.R")
+here::i_am("rna/mapping/run/mnn_agr/mapping_mnn.R")
 
 # Load default settings
 source(here::here("settings.R"))
@@ -33,12 +33,12 @@ args <- p$parse_args(commandArgs(TRUE))
 #####################
 
 # I/O
-io$path2atlas <- io$atlas.basedir
+io$path2atlas <- "/home/lucas/Documents/Work/mouse_ATAC/ftp1.babraham.ac.uk/data"
 io$path2query <- io$basedir
 
 
 # Load mapping functions
-source(here::here("rna/mapping/run/mnn/mapping_functions.R"))
+source(here::here("rna/mapping/run/mnn_agr/mapping_functions.R"))
 
 
 ## START TEST ##
@@ -65,7 +65,7 @@ if (isTRUE(args$test)) print("Test mode activated...")
 
 # Load cell metadata
 meta_query <- fread(args$query_metadata) %>% 
-  .[stripped==TRUE & doublet==FALSE & sample%in%args$query_samples]
+  .[pass_rnaQC==TRUE & doublet_call==FALSE & sample%in%args$query_samples]
 if (isTRUE(args$test)) meta_query <- head(meta_query,n=1000)
 
 # Load SingleCellExperiment
@@ -83,7 +83,7 @@ colData(sce_query) <- tmp %>% as.data.frame %>% tibble::column_to_rownames("cell
 
 # Load cell metadata
 meta_atlas <- fread(args$atlas_metadata) %>%
-  .[pass_rnaQC==F & doublet_call==F & stage%in%args$atlas_stages] %>%
+  .[pass_rnaQC==T & doublet_call==F &pass_atacQC == T & stage%in%args$atlas_stages] %>%
   .[,sample:=factor(sample)]
 
 # Filter
@@ -113,11 +113,11 @@ colData(sce_atlas) <- tmp %>% as.data.frame %>% tibble::column_to_rownames("cell
 # changed column names from 'c("chr","ens_id","symbol")' to 'c("chromosome_name","ensembl_gene_id","external_gene_name")' 
 # and subsequent 'symbol/ens_id/chr' calls to 'external_gene_name/ensembl_gene_id/chromosome_name'
 gene_metadata <- fread(io$gene_metadata) %>% .[,c("chromosome_name","ensembl_gene_id","external_gene_name")] %>%
-  .[external_gene_name!="" & ensembl_gene_id%in%rownames(sce_atlas)] %>%
+  .[external_gene_name!="" & external_gene_name%in%rownames(sce_atlas)] %>%
   .[!duplicated(external_gene_name)]
 
-sce_atlas <- sce_atlas[rownames(sce_atlas)%in%gene_metadata$ensembl_gene_id,]
-foo <- gene_metadata$external_gene_name; names(foo) <- gene_metadata$ensembl_gene_id
+sce_atlas <- sce_atlas[rownames(sce_atlas)%in%gene_metadata$external_gene_name,]
+foo <- gene_metadata$external_gene_name; names(foo) <- gene_metadata$external_gene_name
 rownames(sce_atlas) <- foo[rownames(sce_atlas)]
 
 # Sanity cehcks

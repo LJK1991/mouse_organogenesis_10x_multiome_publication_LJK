@@ -49,6 +49,7 @@ dependencies:
     - scvelo
     - git+https://github.com/settylab/Palantir@removeTSNE
     - git+https://github.com/dpeerlab/SEACells
+    - matplotlib<3.7
 
 
 # conda create -n gastrulation_multiome_10x_rna_snakemake python==3.9 --yes 

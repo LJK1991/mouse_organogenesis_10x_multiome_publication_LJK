@@ -14,13 +14,17 @@ p$add_argument('--samples',       type="character",  default="all",  nargs='+', 
 p$add_argument('--outdir',          type="character",                help='Output directory')
 args <- p$parse_args(commandArgs(TRUE))
 
+# LJK-modify-230329
+# changed path to sce to 'data/~' as it is stored there. before it was 'processed/~' but cant find it then. 
+# Changed samples to 'Day_4' as from c("E8.5_CRISPR_T_KO", "E8.5_CRISPR_T_WT")
 ## START TEST ##
 args <- list()
 args$metadata <- file.path(io$basedir,"results/rna/doublet_detection/sample_metadata_after_doublets.txt.gz")
-args$sce <- file.path(io$basedir,"processed/rna/SingleCellExperiment.rds")
-args$samples <- c("E8.5_CRISPR_T_KO", "E8.5_CRISPR_T_WT") # "all"
+args$sce <- file.path(io$basedir,"data/processed/rna/SingleCellExperiment.rds")
+args$samples <- c("Day_4_L","Day_4_R") # "all"
 args$outdir <- file.path(io$basedir,"results/rna/stats")
 ## END TEST ##
+print(args$samples)
 
 #####################
 ## Parse arguments ##

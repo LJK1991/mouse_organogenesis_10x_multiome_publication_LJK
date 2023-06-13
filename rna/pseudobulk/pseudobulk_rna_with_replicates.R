@@ -37,8 +37,12 @@ dir.create(args$outdir, showWarnings = F, recursive = T)
 ###################
 ## Load metadata ##
 ###################
+#LJK-modify-230406
+#added the genotype column and changed celltype.mapped to celltype
+sample_metadata <- fread(args$metadata)
+sample_metadata$genotype <- 'WT'
 
-cell_metadata.dt <- fread(args$metadata) %>%
+cell_metadata.dt <- sample_metadata %>%
   .[,celltype_genotype:=as.character(NA)] %>% .[!is.na(genotype),celltype_genotype:=sprintf("%s-%s",celltype,genotype)] %>%
   .[pass_rnaQC==TRUE & doublet_call==FALSE & !is.na(eval(as.name(args$group_by)))] %>%
   setnames(args$group_by,"group")

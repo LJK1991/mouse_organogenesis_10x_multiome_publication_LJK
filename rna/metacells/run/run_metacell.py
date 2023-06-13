@@ -10,14 +10,19 @@ import SEACells
 ## Load default settings ##
 ###########################
 
-if search("BI2404M", os.uname()[1]):
-    exec(open('/Users/argelagr/gastrulation_multiome_10x/settings.py').read())
-    exec(open('/Users/argelagr/gastrulation_multiome_10x/utils.py').read())
-elif search("pebble|headstone", os.uname()[1]):
-    exec(open('/bi/group/reik/ricard/scripts/gastrulation_multiome_10x/settings.py').read())
-    exec(open('/bi/group/reik/ricard/scripts/gastrulation_multiome_10x/utils.py').read())
-else:
-    exit("Computer not recognised")
+#LJK-modify-230406
+#removed recognition and just added file.paths
+#if search("BI2404M", os.uname()[1]):
+#    exec(open('/Users/argelagr/gastrulation_multiome_10x/settings.py').read())
+#    exec(open('/Users/argelagr/gastrulation_multiome_10x/utils.py').read())
+#elif search("pebble|headstone", os.uname()[1]):
+#    exec(open('/bi/group/reik/ricard/scripts/gastrulation_multiome_10x/settings.py').read())
+#    exec(open('/bi/group/reik/ricard/scripts/gastrulation_multiome_10x/utils.py').read())
+#else:
+#    exit("Computer not recognised")
+
+exec(open('/home/lucas/Documents/git/mouse_organogenesis_10x_multiome_publication/settings.py').read())
+exec(open('/home/lucas/Documents/git/mouse_organogenesis_10x_multiome_publication/utils.py').read())
 
 ################################
 ## Initialise argument parser ##
@@ -29,8 +34,8 @@ p.add_argument( '--metadata',               type=str,                required=Tr
 p.add_argument( '--outdir',               type=str,                required=True,           help='Output directory')
 p.add_argument( '--samples',            type=str, nargs="+",             default="all",             help='samples to use')
 p.add_argument( '--percent_metacells',            type=float,              default=0.05,             help='Number of metacells (as a fraction of the total number of cells)')
-p.add_argument( '--n_features',            type=int,              default=1500,             help='Number of features')
-p.add_argument( '--n_pcs',            type=int,              default=25,             help='Number of PCs')
+p.add_argument( '--n_features',            type=int,              default=2500,             help='Number of features')
+p.add_argument( '--n_pcs',            type=int,              default=50,             help='Number of PCs')
 # p.add_argument( '--seed',                  type=int,                default=42,               help='Random seed')
 # p.add_argument( '--n_iter',       type=int,              default=50,              help='Number of iterations')
 args = p.parse_args()
@@ -52,7 +57,7 @@ args = vars(args)
 #####################
 ## Parse arguments ##
 #####################
-
+print('here')
 # I/O
 # io["pca_rna"] = io["basedir"] + "/results/rna/dimensionality_reduction/all_cells/E7.5_rep1-E7.5_rep2-E8.0_rep1-E8.0_rep2-E8.5_rep1-E8.5_rep2_pca_features2500_pcs30_batchcorrectionbysample.txt.gz"
 # io["pca_atac"] = io["basedir"] + "/results/atac/archR/dimensionality_reduction/PeakMatrix/all_cells/E7.5_rep1-E7.5_rep2-E8.0_rep1-E8.0_rep2-E8.5_rep1-E8.5_rep2_umap_nfeatures50000_ndims50_neigh45_dist0.45.txt.gz"
@@ -77,7 +82,20 @@ print(args)
 ## Load metadata ##
 ###################
 
-metadata = (pd.read_table(args["metadata"]) >>
+#LJK-modify-230406
+#added a piece to change celltype.mapped to celltype. (starting to think that during the mapping there should be a 'celltype' column instead.
+metadata = pd.read_table(args["metadata"])
+print(metadata.columns)
+new_columns = {}
+for name in metadata.columns:
+	if name == 'celltype.mapped':
+		new_columns[name] = 'celltype'
+	else:
+		new_columns[name] = name
+metadata.rename(columns=new_columns, inplace=True)
+print(metadata.columns)
+
+metadata = (metadata >>
     # mask(X["pass_rnaQC"]==True, X["pass_atacQC"]==True, X["doublet_call"]==False, X["celltype"].isin(opts["celltypes"])) >>
     mask(X["pass_rnaQC"]==True, X["doublet_call"]==False, X["celltype"].isin(opts["celltypes"])) >>
     mask(X["sample"].isin(args["samples"]))
@@ -148,14 +166,20 @@ n_metacells = round(args["percent_metacells"] * adata.shape[0])
 
 print("Fitting SEACells with %d metacells..." % (n_metacells))
 
+#LJK-modify-230406
+#https://github.com/dpeerlab/SEACells/blob/main/SEACells/core.py
+#according to this it should be 'waypoint_proportion' instead of 'waypt_proportion'
+#somehow that doesnt work, but default is 1 anyway so will remove it instead.
+#looks like i have to run .construct_kernel matrix() before calling .fit, will have to ask later if this alters anything
 model = SEACells.core.SEACells(adata, 
                   build_kernel_on = 'X_pca', 
                   n_SEACells = n_metacells, 
                   n_waypoint_eigs=10,
-                  waypt_proportion=1,
                   convergence_epsilon = 1e-6)
 
-model.fit()
+model.construct_kernel_matrix()
+model.initialize_archetypes()
+model.fit(min_iter=10, max_iter=150)
 
 adata.obs[['SEACell']].head()
 
@@ -171,18 +195,30 @@ SEACells.plot.plot_2D(adata, key='X_umap', colour_metacells=False, save_as=args[
 ## Aggregate counts and plot trajectory at the metacell level ##
 ################################################################
 
-adata_metacells = SEACells.core.summarize_by_SEACell(adata, SEACells_label='SEACell', summarize_layer='raw')
-adata_metacells.uns = adata.uns
-adata_metacells.obs = (adata.obs.loc[adata_metacells.obs.index] >> 
-    select(["sample","celltype","genotype"])
-)
+adata_metacells = SEACells.core.summarize_by_SEACell(adata, SEACells_label='SEACell',celltype_label="celltype", summarize_layer='raw')
+#print('1: metacells')
+#print(adata_metacells)
+#adata_metacells.uns = adata.uns
+#print('2: metacells + uns')
+#print(adata_metacells)
+#print('3: metacells.obs.index before')
+#print(adata_metacells.obs.index)
+#print('4: adata.obs')
+#print(adata.obs)
+#print('5: adata.obs.index')
+#print(adata.obs.index)
+#print('6: unique values in SEACells')
+#print(adata.obs['SEACell'].value_counts())
+#adata_metacells.obs = (adata.obs.loc[adata_metacells.obs.index] >> 
+#    select(["sample","celltype"])
+#)
 sc.pp.normalize_total(adata_metacells)
 sc.pp.log1p(adata_metacells)
 sc.pp.highly_variable_genes(adata_metacells, n_top_genes=2500)
 sc.tl.pca(adata_metacells, n_comps=25)
 sc.pp.neighbors(adata_metacells, n_neighbors=25, use_rep='X_pca')
-sc.tl.umap(adata, min_dist=0.5, n_components=2)
-sc.pl.umap(adata, color=["celltype"], size=25, legend_loc=None, save="_umap_metacells.pdf")
+sc.tl.umap(adata_metacells, min_dist=0.5, n_components=2)
+sc.pl.umap(adata_metacells, color=["celltype"], size=25, legend_loc=None, save="_umap_metacells.pdf")
 
 ##########
 ## Save ##

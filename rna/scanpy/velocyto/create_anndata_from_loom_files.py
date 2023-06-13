@@ -10,14 +10,17 @@ import scvelo as scv
 ## Load default settings ##
 ###########################
 
-if search("BI2404M", os.uname()[1]):
-    exec(open('/Users/argelagr/gastrulation_multiome_10x/settings.py').read())
-    exec(open('/Users/argelagr/gastrulation_multiome_10x/utils.py').read())
-elif search("pebble|headstone", os.uname()[1]):
-    exec(open('/bi/group/reik/ricard/scripts/gastrulation_multiome_10x/settings.py').read())
-    exec(open('/bi/group/reik/ricard/scripts/gastrulation_multiome_10x/utils.py').read())
-else:
-    exit("Computer not recognised")
+#if search("BI2404M", os.uname()[1]):
+#    exec(open('/Users/argelagr/gastrulation_multiome_10x/settings.py').read())
+#    exec(open('/Users/argelagr/gastrulation_multiome_10x/utils.py').read())
+#elif search("pebble|headstone", os.uname()[1]):
+#    exec(open('/bi/group/reik/ricard/scripts/gastrulation_multiome_10x/settings.py').read())
+#    exec(open('/bi/group/reik/ricard/scripts/gastrulation_multiome_10x/utils.py').read())
+#else:
+#    exit("Computer not recognised")
+
+exec(open('/home/lucas/Documents/git/mouse_organogenesis_10x_multiome_publication/settings.py').read())
+exec(open('/home/lucas/Documents/git/mouse_organogenesis_10x_multiome_publication/utils.py').read())
 
 ################################
 ## Initialise argument parser ##
@@ -139,7 +142,7 @@ print("Saving output...")
 # adata_final.obs["pass_rnaQC"] = adata_final.obs["pass_rnaQC"].astype("category")
 adata_final.obs["pass_rnaQC"] = adata_final.obs["pass_rnaQC"].astype(str)
 adata_final.obs["doublet_call"] = adata_final.obs["doublet_call"].astype(str)
-adata_final.obs["genotype"] = adata_final.obs["genotype"].astype(str)
+# adata_final.obs["genotype"] = adata_final.obs["genotype"].astype(str)
 # adata_final.obs["pass_atacQC"] = adata_final.obs["pass_atacQC"].astype(str)
 # adata_final.obs = adata_final.obs.drop(["pass_rnaQC","pass_atacQC","barcode","doublet_call"], axis=1)
 

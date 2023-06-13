@@ -38,6 +38,12 @@ opts$sample_cell_separator <- "#"
 ## Load and merge data sets ##
 ##############################
 
+#LJK-add-230328
+#added some testing
+#print('args')
+#print(head(args$samples))
+#print('opts')
+#print(head(opts$samples))
 stopifnot(args$samples%in%opts$samples)
 if (args$test) args$samples <- head(args$samples,n=2)
 
@@ -62,17 +68,30 @@ for (i in args$samples) {
     .[,barcode:=ifelse(rep(opts$trim.barcode,.N),gsub("-1","",barcode),barcode)] %>%
     .[,c("sample","cell"):=list(i,sprintf("%s%s%s",i,opts$sample_cell_separator,barcode))]
   dim(cell.info[[i]])
-  
-  # Load matrix  
-  count_mtx[[i]] <- Read10X(sprintf("%s/%s/outs/unfiltered_feature_bc_matrix",args$inputdir,i))[["Gene Expression"]]
+
+  # Load matrix
+  #LJK-230412-added
+  #allowing to also load non-multiome data which does not have double matrices.
+  tmp_mtx <- Read10X(sprintf("%s/%s/outs/unfiltered_feature_bc_matrix",args$inputdir,i))
+  if (typeof(tmp_mtx) == "list"){
+    count_mtx[[i]] <- tmp_mtx[["Gene Expression"]]
+  } else {
+    count_mtx[[i]] <- tmp_mtx
+  }
+  #count_mtx[[i]] <- Read10X(sprintf("%s/%s/outs/unfiltered_feature_bc_matrix",args$inputdir,i))[["Gene Expression"]]
   # matrix.loc <- sprintf("%s/%s/matrix.mtx.gz",args$inputdir,i)
   # count_mtx[[i]] <- Matrix::readMM(matrix.loc)[gene.info[[i]]$idx,]
   # stopifnot(nrow(cell.info[[i]])==ncol(count_mtx[[i]]))
   # rownames(count_mtx[[i]]) <- gene.info[[i]]$symbol
   # colnames(count_mtx[[i]]) <- cell.info[[i]]$cell
   
+  #LJK-modify-230328
+  # filtering happens for 500 features per cell. my initial filtering is slightly less stringtent
+  # it crashes as the cell barcodes do not get filter and get made as colnames a few steps later
+  # for some reason though it does not works either with the raw data
+  # will comment out as QC filtering will happen at a later step anyway
   # Basic filtering
-  count_mtx[[i]] <- count_mtx[[i]][,colSums(count_mtx[[i]])>=args$min_reads]
+  #count_mtx[[i]] <- count_mtx[[i]][,colSums(count_mtx[[i]])>=args$min_reads]
 }
 
 print(lapply(count_mtx,dim))
@@ -85,10 +104,8 @@ genes <- Reduce("intersect",lapply(count_mtx,rownames))
 for (i in 1:length(count_mtx)) {
   count_mtx[[i]] <- count_mtx[[i]][genes,]
 }
-
 stopifnot(length(unique(lapply(count_mtx,nrow)))==1)
 stopifnot(length(unique(lapply(count_mtx,rownames)))==1)
-
 #################
 ## Concatenate ##
 #################
@@ -114,8 +131,10 @@ colnames(count_mtx) <- cell.info$cell
 # }
 
 # Remove duplicated genes
+print(rep('x',5))
 count_mtx <- count_mtx[!duplicated(rownames(count_mtx)),]
 
+print('2')
 # Sanity checks
 stopifnot(sum(duplicated(rownames(count_mtx)))==0)
 stopifnot(sum(duplicated(colnames(count_mtx)))==0)
@@ -155,9 +174,9 @@ print(table(metadata$stage))
 stopifnot(!is.na(metadata$stage))
 
 # Add genotype information
-metadata[,genotype:=as.character(NA)]
-metadata[grepl("KO",sample),genotype:="T_KO"]
-metadata[grepl("WT",sample),genotype:="WT"]
+#metadata[,genotype:=as.character(NA)]
+#metadata[grepl("KO",sample),genotype:="T_KO"]
+#metadata[grepl("WT",sample),genotype:="WT"]
 
 ##########################
 ## Calculate data stats ##

@@ -3,8 +3,10 @@ here::i_am("rna_atac/mofa/plot_mofa_results.R")
 source(here::here("settings.R"))
 source(here::here("utils.R"))
 
-suppressMessages(library(MOFA2))
-suppressMessages(library(batchelor))
+#LJK - modify - 230623
+#Calling wrong function supressMessages(library("...")) should be supressPackageStartupMessages(....)
+suppressPackageStartupMessages(library(MOFA2))
+suppressPackageStartupMessages(library(batchelor))
 
 ######################
 ## Define arguments ##
@@ -211,8 +213,10 @@ if (args$batch_correction) {
     }
   })
   
-  #perform correction over stages
-  Z_corrected <- reducedMNN(correct_list, merge.order=1:length(correct_list))$corrected 
+  # perform correction over stages
+  #LJK - modify - 230613
+  #same error as in dimensionality_reduction_sce.R on the rna part. if batch is length(1) it needs to be specified. if it is >1 it will be ignored
+  Z_corrected <- reducedMNN(correct_list, merge.order=1:length(correct_list), batch=rep(names(correct_list),dim(correct_list[[1]])[1]))$corrected 
   # colnames(Z_corrected) <- colnames(Z)
 } else {
   Z_corrected <- Z

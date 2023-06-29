@@ -6,8 +6,10 @@ here::i_am("atac/archR/peak_calling/peak_calling_archR.R")
 
 source(here::here("settings.R"))
 source(here::here("utils.R"))
-
+#LJK - add
+#added BSgenome, gave errors otherwise
 suppressPackageStartupMessages(library(ArchR))
+suppressPackageStartupMessages(library(BSgenome.Mmusculus.UCSC.mm10))
 
 ######################
 ## Define arguments ##
@@ -37,9 +39,11 @@ args <- p$parse_args(commandArgs(TRUE))
 ########################
 ## Load cell metadata ##
 ########################
-
+#LJK -  modify
+#remove genotype
 sample_metadata <- fread(args$metadata) %>%
-  .[pass_atacQC==TRUE & doublet_call==FALSE & genotype=="WT"]
+  .[pass_atacQC==TRUE & doublet_call==FALSE]
+# %>% .[genotype == "WT"]
 stopifnot(args$group_by%in%colnames(sample_metadata))
 sample_metadata <- sample_metadata[!is.na(sample_metadata[[args$group_by]])]
 
@@ -65,8 +69,11 @@ if (file.exists(tmp)) ArchRProject@projectMetadata <- readRDS(tmp)
 ## Update ArchR metadata ##
 ###########################
 
+#LJK - modify
+#changed cell name extracting
+#.[cell%in%rownames(ArchRProject)] %>% setkey(cell) %>% .[rownames(ArchRProject)] %>%
 sample_metadata.to.archr <- sample_metadata %>% 
-  .[cell%in%rownames(ArchRProject)] %>% setkey(cell) %>% .[rownames(ArchRProject)] %>%
+  .[cell%in%ArchRProject$cellNames] %>% setkey(cell) %>% .[ArchRProject$cellNames] %>%
   as.data.frame() %>% tibble::column_to_rownames("cell")
 
 stopifnot(all(rownames(sample_metadata.to.archr) == rownames(getCellColData(ArchRProject))))

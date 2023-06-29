@@ -40,13 +40,13 @@ args <- p$parse_args(commandArgs(TRUE))
 
 # Options
 opts$chr <- paste0("chr",1:3)
-opts$test <- TRUE
+opts$test <- FALSE
 
 ########################
 ## Load cell metadata ##
 ########################
 
-sample_metadata <- fread(args$metadata)
+sample_metadata <- fread(args$metadata) %>% .[pass_rnaQC==T & doublet_call==F]
 
 # temporary
 sample_metadata[is.na(stage),stage:=strsplit(sample,"_") %>% map_chr(1)]

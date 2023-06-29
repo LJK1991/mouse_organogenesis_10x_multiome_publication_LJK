@@ -83,10 +83,10 @@ source(here::here("atac/archR/differential/metacells/utils.R"))
 
 print("Loading metacells...")
 
-metacell_metadata.dt <- fread(args$metadata) %>%
-  .[celltype%in%args$celltypes & sample%in%args$samples] %>%
-  .[,celltype_genotype:=sprintf("%s_%s",celltype,genotype)]
-
+#LJK - modify - 230613
+# due to SEAcells metacells names are duplicated in the metacell data. this is easily fixable by removing duplicates
+metacell_metadata.dt <- fread(args$metadata) %>% .[celltype%in%args$celltypes & sample%in%args$samples] %>% .[!duplicated(metacell)]
+  
 stopifnot(args$group_variable%in%colnames(metacell_metadata.dt))
 
 metacell_metadata.dt <- metacell_metadata.dt %>%
@@ -114,7 +114,12 @@ print(sprintf("Fetching ATAC matrix: '%s'...",args$atac_matrix_file))
 
 # Load 
 atac.se <- readRDS(args$atac_matrix_file)[,metacell_metadata.dt$metacell]
-colData(atac.se) <- metacell_metadata.dt %>% tibble::column_to_rownames("metacell") %>% DataFrame
+#LJK-modify-230513
+#the foloowing line gives error due to metacell having duplicates and cannot make rownames.
+#colData(atac.se) already has the rownames assigned and in the correct order, with duplicates. 
+#are you trying to overwrite the colData(atac.se) with metacell_metadata.dt or merge it...confused.
+#anyway removed tibble::column_to_rownames("metacell") to prevent the error. metacell_metadata.dt == rownames(colData(atac.se)) is all TRUE so we can just copy.
+colData(atac.se) <- metacell_metadata.dt %>% DataFrame
 
 # Normalise
 assayNames(atac.se)[1] <- "counts"

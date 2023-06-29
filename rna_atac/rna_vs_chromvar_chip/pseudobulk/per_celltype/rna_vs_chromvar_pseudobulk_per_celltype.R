@@ -16,15 +16,18 @@ p$add_argument('--tf_markers_atac',  type="character",              help='')
 p$add_argument('--outdir',          type="character",                help='Output directory')
 args <- p$parse_args(commandArgs(TRUE))
 
+#LJK - modify - 230620
+#TEST was not commented out, did so
+
 ## START TEST ##
-args <- list()
-args$motif_annotation <- "CISBP"
-args$rna_sce_pseudobulk <- file.path(io$basedir,"results/rna/pseudobulk/celltype/SingleCellExperiment_TFs_pseudobulk.rds")
-args$atac_chromvar_chip_pseudobulk <- file.path(io$basedir,sprintf("results/atac/archR/chromvar_chip/pseudobulk/chromVAR_chip_%s_archr.rds",args$motif_annotation))
+#args <- list()
+#args$motif_annotation <- "CISBP"
+#args$rna_sce_pseudobulk <- file.path(io$basedir,"results/rna/pseudobulk/celltype/SingleCellExperiment_TFs_pseudobulk.rds")
+#args$atac_chromvar_chip_pseudobulk <- file.path(io$basedir,sprintf("results/atac/archR/chromvar_chip/pseudobulk/chromVAR_chip_%s_archr.rds",args$motif_annotation))
 # args$atac_chromvar_chip_pseudobulk <- file.path(io$basedir,sprintf("results/atac/archR/chromvar_chip/pseudobulk/chromVAR_chip_%s_chromvar.rds",args$motif_annotation))
-args$tf_markers_rna <- file.path(io$basedir,"results/rna/differential/pseudobulk/celltype/parsed/marker_tfs_all.txt.gz")
-args$tf_markers_atac <- file.path(io$basedir,"results/atac/archR/chromvar_chip/pseudobulk_with_replicates/differential/celltypes/CISBP/parsed/markers_all.txt.gz")
-args$outdir <- file.path(io$basedir,sprintf("results/rna_atac/rna_vs_chromvar_chip/pseudobulk/per_celltype/%s",args$motif_annotation))
+#args$tf_markers_rna <- file.path(io$basedir,"results/rna/differential/pseudobulk/celltype/parsed/marker_tfs_all.txt.gz")
+#args$tf_markers_atac <- file.path(io$basedir,"results/atac/archR/chromvar_chip/pseudobulk_with_replicates/differential/celltypes/CISBP/parsed/markers_all.txt.gz")
+#args$outdir <- file.path(io$basedir,sprintf("results/rna_atac/rna_vs_chromvar_chip/pseudobulk/per_celltype/%s",args$motif_annotation))
 ## END TEST ##
 
 #####################

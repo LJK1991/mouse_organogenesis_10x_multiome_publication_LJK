@@ -4,7 +4,7 @@ here::i_am("rna_atac/mofa/run_mofa_fast.R")
 source(here::here("settings.R"))
 source(here::here("utils.R"))
 
-
+suppressPackageStartupMessages(library(reticulate))
 suppressPackageStartupMessages(library(MOFA2))
 
 ######################
@@ -20,6 +20,7 @@ p$add_argument('--samples',       type="character",  default="all",  nargs='+', 
 p$add_argument('--factors',           type="integer",    default=30,                  help='Number of MOFA factors')
 p$add_argument('--remove_ExE_cells',       type="character",  default="False",  help='Remove ExE cells? ("True"/"False")')
 p$add_argument('--outdir',          type="character",                               help='Output directory')
+p$add_argument('--python', type="character",help="path to python")
 args <- p$parse_args(commandArgs(TRUE))
 
 ## START TEST ##
@@ -74,7 +75,10 @@ opts$atac.cells <- sample_metadata[pass_atacQC==TRUE,cell]
 ###############################################
 
 # RNA (PCA)
-tmp <- fread(io$pca.rna)
+#LJK - modify - 320622
+#io$pca.rna points to nothing in settings.R
+#there is a io$rna.dimred.pca in settings.R
+tmp <- fread(io$rna.dimred.pca)
 opts$rna.cells <- intersect(tmp$cell,opts$rna.cells)
 rna.mtx <- tmp %>% matrix.please %>% .[opts$rna.cells,] %>% t
 rm(tmp)
@@ -133,6 +137,9 @@ MOFAobject <- prepare_mofa(
 ## Train the model ##
 #####################
 
+#LJK - 230623
+#added the use_pyhton and library reticulate. get an error that the script cannot find mofapy2 but i have it installed.
+reticulate::use_python(args$python,required=TRUE)
 MOFAobject <- run_mofa(MOFAobject)
 
 #########################

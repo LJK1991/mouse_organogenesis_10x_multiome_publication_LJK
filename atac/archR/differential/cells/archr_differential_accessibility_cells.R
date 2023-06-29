@@ -81,9 +81,11 @@ if (args$groupA==args$groupB) {
 ## Load cell metadata ##
 ########################
 
+#LJK - modify
+#no genotype
 cells_metadata.dt <- fread(args$metadata) %>%
-  .[pass_atacQC==TRUE & pass_rnaQC==TRUE & doublet_call==FALSE & celltype%in%args$celltypes & sample%in%args$samples] %>%
-  .[,celltype_genotype:=sprintf("%s_%s",celltype,genotype)]
+  .[pass_atacQC==TRUE & pass_rnaQC==TRUE & doublet_call==FALSE & celltype%in%args$celltypes & sample%in%args$samples]
+# %>% .[,celltype_genotype:=sprintf("%s_%s",celltype,genotype)]
 
 stopifnot(args$group_variable%in%colnames(cells_metadata.dt))
 
@@ -95,7 +97,10 @@ cells_metadata.dt <- cells_metadata.dt %>%
 tmp <- table(cells_metadata.dt$group)
 print(tmp)
 
-if (any(tmp<=args$min_cells)) {
+#LJK-modify-230508
+#if any of the two celltypes do not exist in de dataset, because you have a subset of all celltypes it passes trhough and crashes
+#added an iff statement that also quits the script if tmp is of length 1
+if (any(tmp<=args$min_cells) | length(tmp) == 1) {
   warning("Not enough cells per group to perform DA, saving an empty file...")
   out <- data.table(feature=NA, diff=NA, FDR=NA, AUC=NA, groupA_N=tmp[args$groupA], groupB_N=tmp[args$groupB])
   fwrite(out, args$outfile, sep="\t", na="NA", quote=F)
@@ -117,8 +122,12 @@ ArchRProject <- loadArchRProject(args$archr_directory)[cells_metadata.dt$cell]
 stopifnot(args$matrix%in%getAvailableMatrices(ArchRProject))
 
 # add group to ArchR's CellColData
+#LJK - modify
+#name fecthing issue.
+#  .[cell%in%rownames(ArchRProject)] %>% setkey(cell) %>% .[rownames(ArchRProject)] %>%
+#this does not work
 foo <- cells_metadata.dt %>% 
-  .[cell%in%rownames(ArchRProject)] %>% setkey(cell) %>% .[rownames(ArchRProject)] %>%
+  .[cell%in%ArchRProject$cellNames] %>% setkey(cell) %>% .[ArchRProject$cellNames] %>%
   as.data.frame() %>% tibble::column_to_rownames("cell")
 
 # sanity check

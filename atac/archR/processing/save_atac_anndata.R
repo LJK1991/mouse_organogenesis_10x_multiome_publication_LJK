@@ -42,10 +42,11 @@ sc <- import("scanpy")
 ##########################
 ## Load sample metadata ##
 ##########################
-
+#LJK - modify
+#removed genotype from list of columns
 metadata.dt <- fread(args$metadata) %>% 
   .[pass_rnaQC==TRUE & pass_atacQC==TRUE & doublet_call==FALSE & !is.na(celltype)] %>%
-  .[,c("cell","sample","stage","genotype","celltype","nFrags_atac","nFeature_RNA")]# %>%
+  .[,c("cell","sample","stage","celltype","nFrags_atac","nFeature_RNA")]# %>%
   # setnames("celltype.predicted","celltype")
 
 fwrite(metadata.dt, file.path(dirname(args$outfile),"cell_metadata.txt.gz"), sep="\t", quote=F, na="NA")
@@ -73,8 +74,13 @@ print(head(adata$var))
 ## Parse anndata object ##
 ##########################
 
-adata$uns$update(celltype_colors = opts$celltype.colors[sort(unique(as.character(adata$obs$celltype)))])
-adata$uns$update(stage_colors = opts$stage.colors[sort(unique(as.character(adata$obs$stage)))])
+#adata$uns$update(celltype_colors = opts$celltype.colors[sort(unique(as.character(adata$obs$celltype)))])
+#adata$uns$update(stage_colors = opts$stage.colors[sort(unique(as.character(adata$obs$stage)))])
+#LJK-modify-230512
+#theupdate function doesn't seem to exist anymore, for scanpy, but looks like it he wants to update the unstructured part of the anndata.
+#making the input as dictionaries and assigning them directly to named variables in uns.
+adata$uns$celltype_colors = py_dict(names(opts$celltype.colors[sort(unique(as.character(adata$obs$celltype)))]),opts$celltype.colors[sort(unique(as.character(adata$obs$celltype)))])
+adata$uns$stage_colors = py_dict(names(opts$stage.colors[sort(unique(as.character(adata$obs$stage)))]),opts$stage.colors[sort(unique(as.character(adata$obs$stage)))])
 
 ##########
 ## Save ##

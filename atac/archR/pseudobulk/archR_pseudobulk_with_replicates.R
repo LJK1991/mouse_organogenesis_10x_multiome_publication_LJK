@@ -45,9 +45,9 @@ dir.create(args$outdir, showWarnings=F, recursive=T)
 ###################
 ## Load metadata ##
 ###################
-
+#LJK - modify
+# removed .[,celltype_genotype:=sprintf("%s-%s",celltype,genotype)] %>%
 cell_metadata.dt <- fread(args$metadata) %>%
-  .[,celltype_genotype:=sprintf("%s-%s",celltype,genotype)] %>%
   .[pass_atacQC==TRUE & doublet_call==FALSE & !is.na(eval(as.name(args$group_by)))] %>%
   setnames(args$group_by,"group")
 

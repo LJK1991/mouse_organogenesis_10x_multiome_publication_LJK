@@ -122,7 +122,6 @@ if (matrix_name %in% getAvailableMatrices(ArchRProject)) {
 	} else {
 		stop(sprintf("%s already found in the ArchR object. Pass the --force argument to replace the existing data matrix...",matrix_name))
 	}
-
 } else {
 	ArchRProject <- addDeviationsMatrix(
 	  ArchRProject, 

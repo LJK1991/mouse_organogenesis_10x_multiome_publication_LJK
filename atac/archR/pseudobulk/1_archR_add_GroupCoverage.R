@@ -4,8 +4,10 @@ here::i_am("atac/archR/pseudobulk/1_archR_add_GroupCoverage.R")
 source(here::here("settings.R"))
 source(here::here("utils.R"))
 
+#LJK - add
+#also load BSgenome, otherwise errors
 suppressPackageStartupMessages(library(ArchR))
-
+suppressPackageStartupMessages(library(BSgenome.Mmusculus.UCSC.mm10))
 ######################
 ## Define arguments ##
 ######################
@@ -36,8 +38,11 @@ args <- p$parse_args(commandArgs(TRUE))
 ## Load cell metadata ##
 ########################
 
+#LJK-230503-modify
+#removed `& genotype == 'WT'` have no genotype to choose from
 sample_metadata <- fread(args$metadata) %>%
-  .[pass_atacQC==TRUE & doublet_call==FALSE & genotype=="WT"]
+  .[pass_atacQC==TRUE & doublet_call==FALSE] #%>%
+# .[genotype == "WT"]
 stopifnot(args$group_by%in%colnames(sample_metadata))
 sample_metadata <- sample_metadata[!is.na(sample_metadata[[args$group_by]])]
 
@@ -60,9 +65,11 @@ ArchRProject <- loadArchRProject(args$archr_directory)[sample_metadata$cell]
 ###########################
 ## Update ArchR metadata ##
 ###########################
-
+#LJK - modify
+#extracting names issue, this does not work anymore, changed it
+#.[cell%in%rownames(ArchRProject)] %>% setkey(cell) %>% .[rownames(ArchRProject)] %>%
 sample_metadata.to.archr <- sample_metadata %>% 
-  .[cell%in%rownames(ArchRProject)] %>% setkey(cell) %>% .[rownames(ArchRProject)] %>%
+  .[cell%in%ArchRProject$cellNames] %>% setkey(cell) %>% .[ArchRProject$cellNames] %>%
   as.data.frame() %>% tibble::column_to_rownames("cell")
 
 stopifnot(all(rownames(sample_metadata.to.archr) == rownames(getCellColData(ArchRProject))))
@@ -98,5 +105,5 @@ ArchRProject <- addGroupCoverages(ArchRProject,
 ##########
 ## Save ##
 ##########
-
-saveRDS(ArchRProject@projectMetadata, paste0(io$archR.directory,"/projectMetadata.rds"))
+#use args$archr_directory instead of io$archR.direcotry. easier to work with
+saveRDS(ArchRProject@projectMetadata, paste0(args$archr_directory,"/projectMetadata.rds"))

@@ -100,5 +100,7 @@ addGeneScoreMatrix(
 # rownames(GeneScoreMatrix.se) <- rowData(GeneScoreMatrix.se)$name
 # saveRDS(GeneScoreMatrix.se, file.path(args$outdir,"GeneScoreMatrix_tss.rds"))
 
+#LJK-230506-modify
+#changed how the file path is created. using the archr_directory command as it should be the same always. really annoying mix between io paths and archr_directory.
 # Create a completion token
-file.create(file.path(io["basedir"],"processed/atac/archR/addGeneScoreMatrix_completed.txt"))
+file.create(file.path(args$archr_directory,"/addGeneScoreMatrix_completed.txt"))

@@ -42,9 +42,11 @@ opts$statistical.test <- "wilcoxon"
 ## Load cell metadata ##
 ########################
 
+#LJK - modify
+#preemptively removed genotype
 cells_metadata.dt <- fread(args$metadata) %>%
-  .[genotype=="WT"] %>%
   .[pass_atacQC==TRUE]
+# %>% .[genotype == "WT"]
 
 stopifnot(args$group_variable%in%colnames(cells_metadata.dt))
 

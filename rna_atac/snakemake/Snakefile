@@ -12,6 +12,8 @@ if search("BI2404M", host) and getpass.getuser()=="argelagr":
     configfile: "config_ricard_local.yaml"
 elif search("[headstone|pebble]", host) and getpass.getuser()=="argelagr":
     configfile: "config_ricard_babraham.yaml"
+elif search("kolossus", host) and getpass.getuser()=="lucask":
+    configfile: "config_lucas.yaml"
 else:
     print("Computer not recognised")
     exit()
@@ -97,17 +99,23 @@ rule all:
         # Parsed differential chromVAR-ChIP results
         expand(config["directories"]["results"]+"/atac/archR/chromvar_chip/pseudobulk_with_replicates/differential/celltypes/{motif_annotation}/parsed/diff_results.txt.gz", motif_annotation = config["motif_annotations"]),
 
-        # Define markers using chromVARA-ChIP results
+        # Define markers using chromVAR-ChIP results
         expand(config["directories"]["results"]+"/atac/archR/chromvar_chip/pseudobulk_with_replicates/differential/celltypes/{motif_annotation}/parsed/markers_all.txt.gz", motif_annotation = config["motif_annotations"]),
 
         # RNA vs chromVAR-ChIP
+        #LJK-modify-230621
+        #for some reason wants to run before define markers rule, even when i specify output is needed from that rule, block out and activate later
         expand(config["directories"]["results"] + "/rna_atac/rna_vs_chromvar_chip/pseudobulk/per_gene/{motif_annotation}/cor_rna_vs_chromvar_chip_{motif_annotation}_per_gene_pseudobulk.txt.gz", motif_annotation=config["create_virtual_chip_pseudobulk"]["motif_annotation"]),
         expand(config["directories"]["results"] + "/rna_atac/rna_vs_chromvar_chip/pseudobulk/per_celltype/{motif_annotation}/{motif_annotation}_completed.txt", motif_annotation=config["create_virtual_chip_pseudobulk"]["motif_annotation"]),
         # expand(config["directories"]["results"] + "/rna_atac/rna_vs_chromvar_chip/metacells/per_gene/{motif_annotation}/cor_rna_vs_chromvar_chip_{motif_annotation}_per_gene_metacells.txt.gz", motif_annotation=config["create_virtual_chip_metacells"]["motif_annotation"]),
 
         
         # expand(config["directories"]["results"] + "/rna_atac/rna_vs_chromvar_chip/trajectories/{trajectory_name}/correlation_results.txt.gz", trajectory_name=config["rna_vs_chromvar_chip_trajectory"]["trajectory_name"])
-
+        
+        #FIX FILE DEPENDENCY
+        #LJK - modify - 230614
+        # i get error that "../../factors.txt.gz does not exist for rule all. only rules that use it (that i can find) are plot_mofa_results and plot_mofa_fast_results.
+        #will comment out mofa to see if that works, will come back to dis
         # MOFA
         expand(config["directories"]["results"] + "/rna_atac/mofa/remove_ExE_cells_{remove_ExE_cells}/rna.mtx", remove_ExE_cells=config["prepare_mofa"]["remove_ExE_cells"]),
         expand(config["directories"]["results"] + "/rna_atac/mofa/remove_ExE_cells_{remove_ExE_cells}/atac_tfidf.mtx", remove_ExE_cells=config["prepare_mofa"]["remove_ExE_cells"]),
@@ -116,14 +124,28 @@ rule all:
         expand(config["directories"]["results"] + "/rna_atac/mofa/remove_ExE_cells_{remove_ExE_cells}/cells.txt", remove_ExE_cells=config["prepare_mofa"]["remove_ExE_cells"]),
         expand(config["directories"]["results"] + "/rna_atac/mofa/remove_ExE_cells_{remove_ExE_cells}/sample_metadata.txt.gz", remove_ExE_cells=config["prepare_mofa"]["remove_ExE_cells"]),
         expand(config["directories"]["results"] + "/rna_atac/mofa/remove_ExE_cells_{remove_ExE_cells}/mofa.hdf5", remove_ExE_cells=config["prepare_mofa"]["remove_ExE_cells"]),
-        expand(config["directories"]["results"] + "/rna_atac/mofa/remove_ExE_cells_{remove_ExE_cells}/batch_correction_{mofa_batch_correction}/factors.txt.gz", remove_ExE_cells=config["prepare_mofa"]["remove_ExE_cells"], mofa_batch_correction=config["plot_mofa_results"]["batch_correction"]),
+        
+        #LJK - modify - 230623
+        #when calling the plot_mofa_results like this it asks for the ../../factors.txt.gz, cant figure out why. but when running plot_mofa_fast_results, it does work.
+        #expand(config["directories"]["results"] + "/rna_atac/mofa/remove_ExE_cells_{remove_ExE_cells}/batch_correction_{mofa_batch_correction}/factors.txt.gz", remove_ExE_cells=config["prepare_mofa"]["remove_ExE_cells"], mofa_batch_correction=config["plot_mofa_results"]["batch_correction"]),
 
         # fast MOFA
         config["directories"]["results"] + "/rna_atac/mofa/fast/mofa.rds",
-        expand(config["directories"]["results"] + "/rna_atac/mofa/fast/pdf/batch_correction_{mofa_batch_correction}/factors.txt.gz", mofa_batch_correction=config["plot_mofa_results"]["batch_correction"])
+        expand(config["directories"]["results"] + "/rna_atac/mofa/fast/pdf/batch_correction_{mofa_batch_correction}/factors.txt.gz", mofa_batch_correction=config["plot_mofa_results"]["batch_correction"]),
 
         # expand(config["directories"]["results"] + "/rna_atac/rna_vs_acc/trajectories/{trajectory_name}/TFexpr_vs_peakAcc_{motif_annotation}_{trajectory_name}.rds", 
-        #     motif_annotation=config["tf_expr_vs_peak_accessibility_trajectory"]["motif_annotation"], trajectory_name=config["tf_expr_vs_peak_accessibility_trajectory"]["trajectory_name"] )
+        #     motif_annotation=config["tf_expr_vs_peak_accessibility_trajectory"]["motif_annotation"], trajectory_name=config["tf_expr_vs_peak_accessibility_trajectory"]["trajectory_name"] ),
+        
+        #LJK - add - 230626
+        #testing the GRN rules
+        #GRN
+        #building
+        expand(config["directories"]["results"] + "/rna_atac/gene_regulatory_networks/metacells/trajectories/{trajectories}/global_chip_GRN_coef.txt.gz", trajectories = config["build_GRN_metacells_trajectory"]["trajectory_name"]),
+        #plotting
+        expand(config["directories"]["results"] + "/rna_atac/gene_regulatory_networks/metacells/trajectories/{trajectories}/plot_GRN_metacell_completion_token.txt", trajectories = config["plot_GRN_metacells_trajectory"]["trajectory_name"])
+        
+        #CellOracle
+        expand(config["directories"]["results"] + "/rna_atac/gene_regulatory_networks/metacells/trajectories/{trajectories}/CellOracle/CellOracle_{trajectories}_completion-token.txt", trajectories = config["CellOracle_perturb"]["trajectory_name"])
 
 ###############################
 ## RNA vs gene accessibility ##
@@ -360,13 +382,18 @@ rule run_tf_expr_vs_peak_accessibility_metacells:
         --outdir {params.outdir} --motifmatcher {input.motifmatcher} --motif2gene {input.motif2gene} > {log}"
 
 # FIX NMP
+#LJK - question/to-do - 230614
+#currently only one trajectory is picked for the sce, should this be like an expand? if so how does that work with the config file.
+#created a file path with the directories config and adding the wilcard in the text at with most other options. dont know why this was a direct path to a config. this makes it more flexible for other analysis as well.
 rule run_tf_expr_vs_peak_accessibility_metacells_trajectories:
     input:
         script = config["scripts"]["tf_expr_vs_peak_accessibility_metacells"],
-        # sce = config["resources"]["sce_rna_metacells_trajectory"]["{trajectory_metacells}"],
-        sce = config["resources"]["sce_rna_metacells_trajectory"]["nmp"],
-        # atac_peak_matrix = config["resources"]["atac_peak_matrix_metacells_trajectory"]["{trajectory_metacells}"],
-        atac_peak_matrix = config["resources"]["atac_peak_matrix_metacells_trajectory"]["nmp"],
+        #sce = config["resources"]["sce_rna_metacells_trajectory"]["{trajectory_metacells}"],
+        sce = config["directories"]["results"] + "/rna/metacells/trajectories/{trajectory_metacells}/SingleCellExperiment_metacells.rds",
+        # sce = config["resources"]["sce_rna_metacells_trajectory"]["Haemo"],
+        #atac_peak_matrix = config["resources"]["atac_peak_matrix_metacells_trajectory"]["{trajectory_metacells}"],
+        atac_peak_matrix = config["directories"]["results"] + "/atac/archR/metacells/trajectories/{trajectory_metacells}/PeakMatrix/PeakMatrix_summarized_experiment_metacells.rds",
+        #atac_peak_matrix = config["resources"]["atac_peak_matrix_metacells_trajectory"]["Haemo"],
         motifmatcher = config["directories"]["processed_data"]+"/Annotations/{motif_annotation}-Scores.rds",
         motif2gene = config["directories"]["processed_data"]+"/Annotations/{motif_annotation}_motif2gene.txt.gz"
     output:
@@ -387,11 +414,15 @@ rule run_tf_expr_vs_peak_accessibility_metacells_trajectories:
 ## Virtual ChIP-seq library ##
 ##############################
 
+#LJK - moidify - 230614
+#peak_metadata was stored in a differnt directory (as per atac/Archr/snakemake/Snakefile: line 335)
+
 rule create_virtual_chip_pseudobulk:
     input:
         script = config["scripts"]["create_virtual_chip_pseudobulk"],
         atac_peak_matrix = config["resources"]["atac_peak_matrix_pseudobulk"],
-        peak_metadata = config["directories"]["processed_data"]+"/PeakCalls/peak_metadata.tsv.gz",
+        #peak_metadata = config["directories"]["processed_data"]+"/PeakCalls/peak_metadata.tsv.gz",
+        peak_metadata = config["directories"]["processed_data"]+"/peak_metadata.tsv.gz",
         motifmatcher = config["directories"]["processed_data"]+"/Annotations/{motif_annotation}-Scores.rds",
         motif2gene = config["directories"]["processed_data"]+"/Annotations/{motif_annotation}_motif2gene.txt.gz",
         tf2peak_cor = rules.run_tf_expr_vs_peak_accessibility_pseudobulk.output
@@ -418,7 +449,8 @@ rule create_virtual_chip_metacells:
     input:
         script = config["scripts"]["create_virtual_chip_metacells"],
         atac_peak_matrix = config["resources"]["atac_peak_matrix_metacells"],
-        peak_metadata = config["directories"]["processed_data"]+"/PeakCalls/peak_metadata.tsv.gz",
+        #peak_metadata = config["directories"]["processed_data"]+"/PeakCalls/peak_metadata.tsv.gz",
+        peak_metadata = config["directories"]["processed_data"]+"/peak_metadata.tsv.gz",
         motifmatcher = config["directories"]["processed_data"]+"/Annotations/{motif_annotation}-Scores.rds",
         motif2gene = config["directories"]["processed_data"]+"/Annotations/{motif_annotation}_motif2gene.txt.gz",
         tf2peak_cor = rules.run_tf_expr_vs_peak_accessibility_metacells.output
@@ -444,8 +476,11 @@ rule create_virtual_chip_metacells:
 rule create_virtual_chip_metacells_trajectories:
     input:
         script = config["scripts"]["create_virtual_chip_metacells"],
-        atac_peak_matrix = config["resources"]["atac_peak_matrix_metacells_trajectory"]["nmp"],
-        peak_metadata = config["directories"]["processed_data"]+"/PeakCalls/peak_metadata.tsv.gz",
+        #atac_peak_matrix = config["resources"]["atac_peak_matrix_metacells_trajectory"]["Haemo"],
+        #atac_peak_matrix = config["resources"]["atac_peak_matrix_metacells_trajectory"]["{trajectory_metacells}"],
+        atac_peak_matrix = config["directories"]["results"] + "/atac/archR/metacells/trajectories/{trajectory_metacells}/PeakMatrix/PeakMatrix_summarized_experiment_metacells.rds",
+        #peak_metadata = config["directories"]["processed_data"]+"/PeakCalls/peak_metadata.tsv.gz",
+        peak_metadata = config["directories"]["processed_data"]+"/peak_metadata.tsv.gz",
         motifmatcher = config["directories"]["processed_data"]+"/Annotations/{motif_annotation}-Scores.rds",
         motif2gene = config["directories"]["processed_data"]+"/Annotations/{motif_annotation}_motif2gene.txt.gz",
         tf2peak_cor = rules.run_tf_expr_vs_peak_accessibility_metacells_trajectories.output
@@ -563,7 +598,8 @@ rule run_chromvar_chip_pseudobulk:
     input:
         script = config["scripts"]["run_chromvar_chip"],
         atac_peak_matrix = config["resources"]["atac_peak_matrix_pseudobulk"],
-        peak_metadata = config["directories"]["processed_data"] + "/PeakCalls/peak_metadata.tsv.gz",
+        #peak_metadata = config["directories"]["processed_data"]+"/PeakCalls/peak_metadata.tsv.gz",
+        peak_metadata = config["directories"]["processed_data"]+"/peak_metadata.tsv.gz",
         background_peaks = config["directories"]["processed_data"] + "/Background-Peaks.rds",
         motifmatcher_chip = rules.create_virtual_chip_pseudobulk.output.motifmatchr
     output:
@@ -587,7 +623,8 @@ rule run_chromvar_chip_metacells:
     input:
         script = config["scripts"]["run_chromvar_chip"],
         atac_peak_matrix = config["resources"]["atac_peak_matrix_metacells"],
-        peak_metadata = config["directories"]["processed_data"] + "/PeakCalls/peak_metadata.tsv.gz",
+        #peak_metadata = config["directories"]["processed_data"]+"/PeakCalls/peak_metadata.tsv.gz",
+        peak_metadata = config["directories"]["processed_data"]+"/peak_metadata.tsv.gz",
         background_peaks = config["directories"]["processed_data"] + "/Background-Peaks.rds",
         motifmatcher_chip = rules.create_virtual_chip_metacells.output.motifmatchr
     output:
@@ -611,7 +648,8 @@ rule run_chromvar_chip_pseudobulk_with_replicates:
     input:
         script = config["scripts"]["run_chromvar_chip"],
         atac_peak_matrix = config["resources"]["atac_peak_matrix_pseudobulk_with_replicates"],
-        peak_metadata = config["directories"]["processed_data"] + "/PeakCalls/peak_metadata.tsv.gz",
+        #peak_metadata = config["directories"]["processed_data"]+"/PeakCalls/peak_metadata.tsv.gz",
+        peak_metadata = config["directories"]["processed_data"]+"/peak_metadata.tsv.gz",
         background_peaks = config["directories"]["processed_data"] + "/Background-Peaks.rds",
         motifmatcher_chip = rules.create_virtual_chip_pseudobulk.output.motifmatchr
     output:
@@ -636,6 +674,10 @@ rule run_chromvar_chip_pseudobulk_with_replicates:
 ## Plot RNA expression vs chromVAR-ChIP ##
 ##########################################
 
+#LJK - modify - 230622
+# some of the input arguments were worngly named
+# used to be "--atac_chromvar_chip_pseudobulk | --rna_sce_pseudobulk"
+
 rule rna_vs_chromvar_chip_per_gene_pseudobulk:
     input:
         script = config["scripts"]["rna_vs_chromvar_chip_per_gene_pseudobulk"],
@@ -652,15 +694,23 @@ rule rna_vs_chromvar_chip_per_gene_pseudobulk:
     log: 
         "logs/rna_vs_chromvar_chip_per_gene_pseudobulk_{motif_annotation}.log"
     shell:
-        "Rscript {input.script} --atac_chromvar_chip_pseudobulk {input.atac_chromvar_chip_pseudobulk} --rna_sce_pseudobulk {input.rna_sce_pseudobulk} \
+        "Rscript {input.script} --atac_chromvar_chip {input.atac_chromvar_chip_pseudobulk} --rna_sce {input.rna_sce_pseudobulk} \
          --motif_annotation {wildcards.motif_annotation} --outdir {params.outdir} > {log}"
 
+#LJK - modify - 230614
+# tf_markers points to a non-existent file. "../results/rna/differential/metacells/celltype/TFs/marker_TFs_all.txt.gz"
+# this is commented out on the rna/snakemake/snakefile where only the pseudbulk version is generated. will use this instead.
+# created two tf_markers options, as the script requires it. in addition to the above comment tf_markers_atac does not exist yet.
+# the script in 'TEST' points to "../results/atac/archR/chromvar_chip/pseudobulk_with_replicates/differential/celltypes/CISBP/parsed/markers_all.txt.gz"
+#is the output from the define_celltype_markers_chromvar_chip_pseudobulk rule?
+#hopefully like this it will also make the rule ordering correct
 rule rna_vs_chromvar_chip_per_celltype_pseudobulk:
     input:
         script = config["scripts"]["rna_vs_chromvar_chip_per_celltype_pseudobulk"],
         atac_chromvar_chip_pseudobulk = rules.run_chromvar_chip_pseudobulk.output.chromvar,
         rna_sce_pseudobulk = config["resources"]["sce_rna_tfs_pseudobulk"],
-        tf_markers = config["resources"]["tf_markers"]
+        tf_markers_rna = config["resources"]["tf_markers_rna"],
+        tf_markers_atac = config["directories"]["results"] + "/atac/archR/chromvar_chip/pseudobulk_with_replicates/differential/celltypes/{motif_annotation}/parsed/markers_all.txt.gz"
     output:
         config["directories"]["results"] + "/rna_atac/rna_vs_chromvar_chip/pseudobulk/per_celltype/{motif_annotation}/{motif_annotation}_completed.txt"
     params:
@@ -673,7 +723,7 @@ rule rna_vs_chromvar_chip_per_celltype_pseudobulk:
         "logs/rna_vs_chromvar_chip_per_celltype_pseudobulk_{motif_annotation}.log"
     shell:
         "Rscript {input.script} --atac_chromvar_chip_pseudobulk {input.atac_chromvar_chip_pseudobulk} --rna_sce_pseudobulk {input.rna_sce_pseudobulk} \
-        --motif_annotation {wildcards.motif_annotation} --tf_markers {input.tf_markers} --outdir {params.outdir} > {log}"
+        --motif_annotation {wildcards.motif_annotation} --tf_markers_rna {input.tf_markers_rna} --tf_markers_atac {input.tf_markers_atac} --outdir {params.outdir} > {log}"
 
 ################################
 ## Differential chromVAR-ChIP ##
@@ -719,7 +769,7 @@ rule parse_differential_chromvar_chip_celltypes_pseudobulk:
 rule define_celltype_markers_chromvar_chip_pseudobulk: 
     input:
         diff_results = expand(rules.parse_differential_chromvar_chip_celltypes_pseudobulk.output, motif_annotation="{motif_annotation}"),
-        script = config["scripts"]["define_markers_chromvar_chip"],
+        script = config["scripts"]["define_markers_chromvar_chip"]
     output:
         all_markers = config["directories"]["results"]+"/atac/archR/chromvar_chip/pseudobulk_with_replicates/differential/celltypes/{motif_annotation}/parsed/markers_all.txt.gz",
         filt_markers = config["directories"]["results"]+"/atac/archR/chromvar_chip/pseudobulk_with_replicates/differential/celltypes/{motif_annotation}/parsed/markers_filt.txt.gz"
@@ -794,6 +844,8 @@ rule run_mofa:
         "python {input.script} --rna_matrix {input.rna_mtx} --atac_matrix {input.atac_mtx} --rna_features {input.rna_features} --atac_features {input.atac_features} --cells {input.cells} \
           --factors {params.factors} --seed {params.seed} --convergence_mode {params.convergence_mode} --outfile {output} > {log}"
 
+#LJK - modify - 230623
+#added a python option so it can be used to specify it for reticulate and MOFA
 rule run_mofa_fast:
     input:
         metadata = config["resources"]["cell_metadata"],
@@ -805,7 +857,8 @@ rule run_mofa_fast:
         metadata = config["directories"]["results"] + "/rna_atac/mofa/fast/sample_metadata.txt.gz"
     params:
         factors = config["run_mofa"]["factors"],
-        outdir = config["directories"]["results"] + "/rna_atac/mofa/fast"
+        outdir = config["directories"]["results"] + "/rna_atac/mofa/fast",
+        python = config["resources"]["python"]
     threads: 
         config["slurm"]["run_mofa_fast"]["threads"]
     resources:
@@ -813,7 +866,7 @@ rule run_mofa_fast:
     log: 
         "logs/run_mofa_fast.log"
     shell:
-        "Rscript {input.script} --metadata {input.metadata} --rna_dimred {input.rna_dimred} --atac_dimred {input.atac_dimred} --factors {params.factors} --outdir {params.outdir} > {log}"
+        "Rscript {input.script} --metadata {input.metadata} --rna_dimred {input.rna_dimred} --atac_dimred {input.atac_dimred} --factors {params.factors} --outdir {params.outdir} --python {params.python} > {log}"
 
 
 rule plot_mofa_results:
@@ -851,3 +904,87 @@ rule plot_mofa_fast_results:
         "logs/plot_mofa_results_batch_correction_{mofa_batch_correction}.log"
     shell:
         "Rscript {input.script} --metadata {input.metadata} --mofa_model {input.mofa_model} --batch_correction {wildcards.mofa_batch_correction} --outdir {params.outdir} > {log}"
+
+##################
+## building GRN ##
+##################
+
+#LJK - added - 230626
+#build two rules to create GRN for the trajectories.
+#NOTE! should i make the build_GRN_metacells_trajectory do both motif annotations (JASPAR/CISBP)
+
+rule build_GRN_metacells_trajectory:
+    input:
+        script = config["scripts"]["build_GRN_metacells_trajectory"],
+        trajectory = config["directories"]["results"] + "/rna/metacells/trajectories/{trajectory_metacells}/metacell_trajectory.txt.gz",
+        sce = config["directories"]["results"] + "/rna/metacells/trajectories/{trajectory_metacells}/SingleCellExperiment_metacells.rds",
+        tf2gene_virtual_chip = config["directories"]["results"] + "/rna_atac/virtual_chipseq/metacells/trajectories/{trajectory_metacells}/JASPAR/TF2gene_after_virtual_chip.txt.gz"
+    output:
+        config["directories"]["results"] + "/rna_atac/gene_regulatory_networks/metacells/trajectories/{trajectory_metacells}/global_chip_GRN_coef.txt.gz"
+    params:
+        outdir = config["directories"]["results"] + "/rna_atac/gene_regulatory_networks/metacells/trajectories/{trajectory_metacells}/",
+        max_distance = config["build_GRN_metacells_trajectory"]["max_distance"],
+        min_chip_score = config["build_GRN_metacells_trajectory"]["min_chip_score"],
+        #trajectory_name = config["build_GRN_metacells_trajectory"]["trajectory_name"],
+        trajectory_name = "{trajectory_metacells}"
+    threads:
+        config["slurm"]["build_GRN_metacells_trajectory"]["threads"]
+    resources:
+        mem_mb = config["slurm"]["build_GRN_metacells_trajectory"]["memory"]
+    log:
+        "logs/build_GRN_metacells_{trajectory_metacells}.log"
+    shell:
+        "Rscript {input.script} --trajectory {input.trajectory} --sce {input.sce} --tf2gene_virtual_chip {input.tf2gene_virtual_chip} --outdir {params.outdir} --max_distance {params.max_distance} --min_chip_score {params.min_chip_score} --trajectory_name {params.trajectory_name} --threads {threads} > {log}"
+
+rule plot_GRN_metacells_trajectory:
+    input:
+        script = config["scripts"]["plot_GRN_metacells_trajectory"],
+        GRN_coef = rules.build_GRN_metacells_trajectory.output,
+        trajectory_file = config["directories"]["results"] + "/rna/metacells/trajectories/{trajectory_metacells}/metacell_trajectory.txt.gz",
+        rna_metacells_sce = config["directories"]["results"] + "/rna/metacells/trajectories/{trajectory_metacells}/SingleCellExperiment_metacells.rds",
+        rna_pseudobulk_sce = config["directories"]["results"] + "/rna/pseudobulk/celltype/SingleCellExperiment_pseudobulk.rds",
+        metacell_metadata = config["directories"]["results"] + "/rna/metacells/trajectories/{trajectory_metacells}/metacells_metadata.txt.gz"
+    output:
+        config["directories"]["results"] + "/rna_atac/gene_regulatory_networks/metacells/trajectories/{trajectory_metacells}/plot_GRN_metacell_completion_token.txt"
+    params:
+        outdir = config["directories"]["results"] + "/rna_atac/gene_regulatory_networks/metacells/trajectories/{trajectory_metacells}/",
+        min_coef = config["plot_GRN_metacells_trajectory"]["min_coef"],
+        min_tf_score = config["plot_GRN_metacells_trajectory"]["min_tf_score"],
+        #trajectory_name = config["plot_GRN_metacells_trajectory"]["trajectory_name"],
+        trajectory_name = "{trajectory_metacells}"
+    threads:
+        config["slurm"]["plot_GRN_metacells_trajectory"]["threads"]
+    resources:
+        mem_mb = config["slurm"]["plot_GRN_metacells_trajectory"]["memory"]
+    log:
+        "logs/plot_GRN_metacells_{trajectory_metacells}.log"
+    shell:
+        "Rscript {input.script} --trajectory_file {input.trajectory_file} --GRN_coef {input.GRN_coef} --rna_metacells_sce {input.rna_metacells_sce} --rna_pseudobulk_sce {input.rna_pseudobulk_sce} --metacell_metadata {input.metacell_metadata} --outdir {params.outdir} --min_coef {params.min_coef} --min_tf_score {params.min_tf_score} --trajectory_name {params.trajectory_name} > {log}"
+        
+################
+## CellOracle ##
+################
+
+rule CellOracle_perturb:
+    input:
+        script = config["scripts"]["CellOracle_perturb"]
+        metadata = config["directories"]["results"] + "/rna/metacells/trajectories/{trajectory_metacells}/metacells_metadata.txt.gz",
+        anndata = config["directories"]["results"] + "/rna/metacells/trajectories/{trajectory_metacells}/anndata_metacells.h5ad",
+        tf2gene = config["directories"]["results"] + "/rna_atac/virtual_chipseq/metacells/trajectories/{trajectory_metacells}/JASPAR/TF2gene_after_virtual_chip.txt.gz",
+        trajectory_file = config["directories"]["results"] + "/rna/metacells/trajectories/{trajectory_metacells}/metacell_trajectory.txt.gz"
+    output:
+        config["directories"]["results"] + "/rna_atac/gene_regulatory_networks/metacells/trajectories/{trajectory_metacells}/CellOracle/CellOracle_{trajectory_metacells}_completion-token.txt"
+    params:
+        outdir = config["directories"]["results"] + "/rna_atac/gene_regulatory_networks/metacells/trajectories/{trajectory_metacells}/CellOracle/",
+        trajectory_name = "{trajectory_metacells}",
+        samples = config["samples"],
+        chip_score = config["CellOracle_perturb"]["chip_score"],
+        max_distance = config["CellOracle_perturb"]["max_distance"]
+    threads:
+        config["slurm"]["CellOracle_perturb"]["threads"]
+    resources:
+        mem_mb = config["slurm"]["CellOracle_perturb"]["memory"]
+    log:
+        "logs/CellOracle_perturb_{trajectory_metacells}.log"
+    shell:
+        "python {input.script} --metadata {input.metadata} --anndata {input.anndata} --tf2gene {input.tf2gene} --trajectory_file {input.trajectory_file} --outdir {params.outdir} --trajectory_name {params.trajectory_name} --samples {params.samples} --chip_score {params.chip_score} --max_distance {params.max.distance} > {log}"

@@ -4,7 +4,7 @@ suppressPackageStartupMessages(library(ArchR))
 ## Define settings ##
 #####################
 
-io$archR.directory <- file.path(io$basedir,"processed/atac/archR")
+io$archR.directory <- file.path(io$basedir,"data/processed/atac/archR")
 # io$archR.directory <- file.path(io$basedir,"test/processed/atac/archR")
 # io$atac.peak.annotation <- file.path(io$basedir,"/original/atac_peak_annotation.tsv")
 io$archR.projectMetadata <- file.path(io$archR.directory,"projectMetadata.rds")

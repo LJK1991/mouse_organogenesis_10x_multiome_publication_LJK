@@ -1,35 +1,65 @@
+here::i_am("rna_atac/gene_regulatory_networks/metacells/trajectories/plot_GRN_metacells_trajectory.R")
 
 source(here::here("settings.R"))
 source(here::here("utils.R"))
 
-suppressMessages(library(GGally))
-suppressMessages(library(igraph))
-suppressMessages(library(network))
-suppressMessages(library(sna))
+suppressPackageStartupMessages(library(GGally))
+suppressPackageStartupMessages(library(igraph))
+suppressPackageStartupMessages(library(network))
+suppressPackageStartupMessages(library(sna))
 # suppressMessages(library(intergraph))
-suppressMessages(library(ggraph))
-suppressMessages(library(igraph))
-suppressMessages(library(tidygraph))
+suppressPackageStartupMessages(library(ggraph))
+suppressPackageStartupMessages(library(igraph))
+suppressPackageStartupMessages(library(tidygraph))
+
+################################
+## Initialize argument parser ##
+################################
+
+#LJK 230626
+# Made it so that the entire script can be run with input options
+
+p <- ArgumentParser(description='')
+p$add_argument('--trajectory_file', type="character", help="trajectory file (rna)")
+p$add_argument('--rna_metacells_sce',type="character",help="RNA metacell sce")
+p$add_argument('--rna_pseudobulk_sce', type="character",help='RNA pseudobulk sce')
+p$add_argument('--trajectory_name', type="character",help="name of trajectory")
+p$add_argument('--metacell_metadata',type="character",help="RNA metacell metadata")
+p$add_argument('--GRN_coef',type="character",help="trajectory GRN coef")
+p$add_argument('--min_coef',type="numeric", default = 0.25, help="minimum coeficient")
+p$add_argument('--min_tf_score',type="numeric", default= 0.75, help="minimum TF score")
+p$add_argument('--outdir',          type="character",                help='Output directory')
+args <- p$parse_args(commandArgs(TRUE))
+
 
 #####################
 ## Define settings ##
 #####################
 
 # args$rna_cells.sce <- io$rna.sce
-io$rna_metacells.sce <- file.path(io$basedir, 'results/rna/metacells/trajectories/nmp/SingleCellExperiment_metacells.rds')
-io$rna_pseudobulk.sce <- file.path(io$basedir,"results/rna/pseudobulk/celltype/SingleCellExperiment_pseudobulk.rds")
-io$trajectory_file <- file.path(io$basedir,"results/rna/metacells/trajectories/nmp/metacell_trajectory.txt.gz")
-io$trajectory <- "nmp"
-io$metacell_metadata <- file.path(io$basedir,"results/rna/metacells/trajectories/nmp/metacells_metadata.txt.gz")
-io$grn_coef <- file.path(io$basedir,'results/rna_atac/gene_regulatory_networks/metacells/trajectories/nmp/global_chip_GRN_coef.txt.gz')
-io$outdir <-  file.path(io$basedir,"results/rna_atac/gene_regulatory_networks/metacells/trajectories/nmp/fig"); dir.create(io$outdir, showWarnings = F)
+#io$rna_metacells.sce <- file.path(io$basedir, 'results/rna/metacells/trajectories/nmp/SingleCellExperiment_metacells.rds')
+#io$rna_pseudobulk.sce <- file.path(io$basedir,"results/rna/pseudobulk/celltype/SingleCellExperiment_pseudobulk.rds")
+#io$trajectory_file <- file.path(io$basedir,"results/rna/metacells/trajectories/nmp/metacell_trajectory.txt.gz")
+#io$trajectory <- "nmp"
+#io$metacell_metadata <- file.path(io$basedir,"/rna/metacells/trajectories/nmp/metacells_metadata.txt.gz")
+#io$grn_coef <- file.path(io$basedir,'results/rna_atac/gene_regulatory_networks/metacells/trajectories/nmp/global_chip_GRN_coef.txt.gz')
+#io$outdir <-  file.path(io$basedir,"results/rna_atac/gene_regulatory_networks/metacells/trajectories/nmp/fig"); dir.create(io$outdir, showWarnings = F)
 
 # Options
-opts$min_coef <- 0.25
-opts$min_tf_score <- 0.75
+#opts$min_coef <- 0.25
+#opts$min_tf_score <- 0.75
 
-if (io$trajectory=="nmp") {
+#LJK - add
+# added my own celltype trajectory specifications
+
+if (args$trajectory_name =="nmp") {
   celltypes.to.plot <- c("Caudal_Mesoderm", "Somitic_mesoderm", "NMP", "Spinal_cord")
+} else if (args$trajectory_name == "Haemo") {
+  celltypes.to.plot <- c("Epiblast","PGC","Primitive_Streak","Nascent_mesoderm","Mixed_mesoderm","Haematoendothelial_progenitors","Blood_progenitors_1","Blood_progenitors_2")
+} else if (args$trajectory_name == "Mesen") {
+  celltypes.to.plot <- c("Epiblast","PGC","Primitive_Streak","Nascent_mesoderm","Mixed_mesoderm","Mesenchyme")
+} else if (args$trajectory_name == "HeaMen") {
+  celltypes.to.plot <- c("Nascent_mesoderm","Mixed_mesoderm","Mesenchyme","Haematoendothelial_progenitors")
 }
 
 theme_graph <- function() {
@@ -43,13 +73,15 @@ theme_graph <- function() {
     )
 }
 
+dir.create(args$outdir, showWarnings=F)
+
 #####################
 ## Load trajectory ##
 #####################
 
-metacell_metadata.dt <- fread(io$metacell_metadata)
+metacell_metadata.dt <- fread(args$metacell_metadata)
 
-trajectory.dt <- fread(io$trajectory_file) %>%
+trajectory.dt <- fread(args$trajectory_file) %>%
   setnames(c("metacell","FA1","FA2")) %>%
   merge(metacell_metadata.dt[,c("metacell","celltype")])
 
@@ -59,12 +91,14 @@ trajectory.dt <- fread(io$trajectory_file) %>%
 ##############################
 
 # TFs <- fread(paste0(io$basedir,"/results/rna_atac/gene_regulatory_networks/TFs.txt"))[[1]]
+#LJK - note
+# make sure to get the correct marker_TFs.all file
 marker_TFs_all.dt <- fread(io$rna.atlas.marker_TFs.all) %>% 
   .[celltype%in%celltypes.to.plot] %>%
   .[,gene:=toupper(gene)]
 
 marker_TFs_filt.dt <- marker_TFs_all.dt %>% 
-  .[score>=opts$min_tf_score]
+  .[score>=args$min_tf_score]
 
 print(unique(marker_TFs_filt.dt$gene))
 
@@ -78,18 +112,18 @@ marker_TFs_all.dt <- marker_TFs_all.dt[celltype!="Caudal_Mesoderm"]
 # rna_cells.sce <- readRDS(args$rna_cells.sce)[,trajectory.dt$cell]
 
 # SingleCellExperiment at metacell resolution
-rna_metacells.sce <- readRDS(io$rna_metacells.sce)
+rna_metacells.sce <- readRDS(args$rna_metacells_sce)
 
 # SingleCellExperiment at pseudobulk resolution
-rna_pseudobulk.sce <- readRDS(io$rna_pseudobulk.sce)#[,celltypes.to.plot]
+rna_pseudobulk.sce <- readRDS(args$rna_pseudobulk_sce)#[,celltypes.to.plot]
 
 ##################################
 ## Load global GRN coefficients ##
 ##################################
 
-GRN_coef.dt <- fread(io$grn_coef) %>% 
+GRN_coef.dt <- fread(args$GRN_coef) %>% 
   .[,gene:=toupper(gene)] %>% .[gene%in%unique(marker_TFs_filt.dt$gene) & tf%in%unique(marker_TFs_filt.dt$gene)] %>%
-  .[pvalue<0.10 & abs(beta)>=opts$min_coef]
+  .[pvalue<0.10 & abs(beta)>=args$min_coef]
 
 # Consider only positive links
 # GRN_coef.dt <- GRN_coef.dt[beta>=0]
@@ -158,7 +192,7 @@ p <- ggraph(igraph.tbl, 'stress') +
   scale_fill_manual(values=opts$celltype.colors) +
   theme_graph()
 
-pdf(file.path(io$outdir,"global_network_celltype.pdf"), width = 5.5, height = 5.75)
+pdf(file.path(args$outdir,"global_network_celltype.pdf"), width = 5.5, height = 5.75)
 print(p)
 dev.off()
 
@@ -175,7 +209,7 @@ p <- ggraph(igraph.tbl, 'stress') +
   scale_fill_gradient(low = "white", high = "orange") +
   theme_graph()
 
-pdf(file.path(io$outdir,"global_network_eigen_centrality.pdf"), width = 4.5, height = 5)
+pdf(file.path(args$outdir,"global_network_eigen_centrality.pdf"), width = 4.5, height = 5)
 print(p)
 dev.off()
 
@@ -201,7 +235,7 @@ p <- ggplot(to.plot, aes_string(x="centrality", y="tf")) +
     axis.text.y = element_text(size=rel(0.75), color="black")
   )
 
-pdf(file.path(io$outdir,"global_network_eigen_centrality.pdf"), width = 4, height = 4.5)
+pdf(file.path(args$outdir,"global_network_eigen_centrality.pdf"), width = 4, height = 4.5)
 print(p)
 dev.off()
 
@@ -219,7 +253,7 @@ p <- ggraph(igraph.tbl, 'stress') +
   scale_fill_manual(values=opts$celltype.colors) +
   theme_graph()
 
-pdf(file.path(io$outdir,"global_network_repressive_interactions.pdf"), width = 5, height = 5.5)
+pdf(file.path(args$outdir,"global_network_repressive_interactions.pdf"), width = 5, height = 5.5)
 print(p)
 dev.off()
 
@@ -237,7 +271,7 @@ p <- ggraph(igraph.tbl, 'stress') +
   scale_fill_manual(values=opts$celltype.colors) +
   theme_graph()
 
-pdf(file.path(io$outdir,"global_network_activatory_interactions.pdf"), width = 5.5, height = 5.5)
+pdf(file.path(args$outdir,"global_network_activatory_interactions.pdf"), width = 5.5, height = 5.5)
 print(p)
 dev.off()
 
@@ -245,7 +279,9 @@ dev.off()
 ## Highlight a TF with pleiotropy effects (both positive and negative interactions) ##
 ######################################################################################
 
-TF_of_interest <- "CDX2"
+#LJK - note
+# i guess this is comletely user dependent, changed to from "CDX2" to "ETV2"
+TF_of_interest <- "ETV2"
 
 idx <- which(names(V(igraph.net))==TF_of_interest)
 test <- igraph.tbl %>% activate(edges) %>% filter(from==idx)
@@ -262,7 +298,7 @@ p <- ggraph(test, 'stress') +
   scale_fill_manual(values=opts$celltype.colors) +
   theme_graph()
 
-pdf(file.path(io$outdir,"CDX2_network.pdf"), width = 4, height = 4)
+pdf(file.path(args$outdir,sprintf("%s_network.pdf",TF_of_interest)), width = 4, height = 4)
 print(p)
 dev.off()
 
@@ -270,7 +306,9 @@ dev.off()
 ## Plot network per cell type ##
 ################################
 
-celltypes.to.plot <- c("Spinal_cord","NMP","Somitic_mesoderm")
+#LJK - modify 230626
+#is specified above, lets not attempt to overwrite it in some way 
+#celltypes.to.plot <- c("Spinal_cord","NMP","Somitic_mesoderm")
 
 for (i in celltypes.to.plot) {
   
@@ -292,7 +330,7 @@ for (i in celltypes.to.plot) {
       legend.position = "right"
     )
   
-  pdf(file.path(io$outdir,sprintf("network_coloured_by_%s_expr.pdf",i)), width = 5, height = 5.5)
+  pdf(file.path(args$outdir,sprintf("network_coloured_by_%s_expr.pdf",i)), width = 5, height = 5.5)
   print(p)
   dev.off()
   
@@ -306,7 +344,7 @@ for (i in celltypes.to.plot) {
 ## Plot network along the trajectory ##
 #######################################
 
-dir.create(file.path(io$outdir,"gif"), showWarnings = F)
+dir.create(file.path(args$outdir,"gif"), showWarnings = F)
 
 ntimepoints <- 20
 
@@ -349,8 +387,11 @@ for (i in unique(trajectory.dt$pseudotime_group)) {
   expr.values[expr.values<=0.1] <- 0.1; expr.values[expr.values>=0.9] <- 0.9
   igraph.tbl <- igraph.tbl %>% activate(nodes) %>% mutate(expr=expr.values[names(V(igraph.net))])
   
+  #LJK - modify - 230627
+  #tibble is not  loaded
+  
   # (TO-DO) Gray out edges of genes that are not expressed
-  tmp <- tibble(tf=names(expr.values), alpha=expr.values, from=1:length(expr.values))
+  tmp <- tibble::tibble(tf=names(expr.values), alpha=expr.values, from=1:length(expr.values))
   igraph.tbl.i <- igraph.tbl %>% activate(edges) %>% left_join(tmp,by="from")
   
   
@@ -373,18 +414,24 @@ for (i in unique(trajectory.dt$pseudotime_group)) {
   
   # Combine plots
   p <- cowplot::plot_grid(plotlist=list(p1,p2), nrow = 1, rel_widths = c(1/3,2/3))
-  outfile <- sprintf("%s/gif/%d_nmp_pseudotime_GRN.png",io$outdir,i)
+  outfile <- sprintf("%s/gif/%d_%s_pseudotime_GRN.png",args$outdir,i,args$trajectory_name)
   png(outfile, width = 1300, height = 650, bg = "white")
   print(p)
   dev.off()
 }
 
+#LJK - note
+#why is the fina path = sprintf there? should it not write to the first one?
+#magick can't install, tried giski but doesnt wont to isntall either...cant put gif in thesis anyway
 
 # Create GIF 
-library(magick)
-sprintf("%s/gif/%d_nmp_pseudotime_GRN.png",io$outdir,sort(unique(trajectory.dt$pseudotime_group))) %>%
-  map(image_read) %>%
-  image_join %>%
-  image_animate(fps=2) %>%
-  image_write(quality=100, path = sprintf("%s/gif/test.gif",io$outdir))
+#library(magick)
+#sprintf("%s/gif/%d_%s_pseudotime_GRN.png",args$outdir,sort(unique(trajectory.dt$pseudotime_group)),args$trajectory_name) %>%
+#  map(image_read) %>%
+#  image_join %>%
+#  image_animate(fps=2) %>%
+#  image_write(quality=100, path = sprintf("%s/gif/test.gif",args$outdir))
 
+#LJK - add
+#Snakemake output Token
+fwrite(list('completed'),file.path(args$outdir,"plot_GRN_metacell_completion_token.txt"))

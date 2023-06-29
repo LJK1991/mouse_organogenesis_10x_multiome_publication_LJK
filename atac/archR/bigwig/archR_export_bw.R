@@ -33,10 +33,11 @@ args <- p$parse_args(commandArgs(TRUE))
 ########################
 ## Load cell metadata ##
 ########################
-
+#LJK - modify
+#dont have genotype commented it out
 sample_metadata <- fread(args$metadata) %>%
-  .[pass_atacQC==TRUE & sample%in%opts$samples] %>%
-  .[,celltype_genotype:=sprintf("%s-%s",celltype,genotype)]
+  .[pass_atacQC==TRUE & sample%in%opts$samples]
+  # %>% .[,celltype_genotype:=sprintf("%s-%s",celltype,genotype)]
 
 stopifnot(args$group_by%in%colnames(sample_metadata))
 sample_metadata <- sample_metadata[!is.na(sample_metadata[[args$group_by]])]
@@ -57,14 +58,20 @@ setwd(args$archr_directory)
 addArchRGenome("mm10")
 addArchRThreads(threads = args$threads)
 
-ArchRProject <- loadArchRProject(args$archr_directory)[sample_metadata$cell]
+#LJK - modify
+# was called ArchRProject, but rest of script ArchRProject.filt, changed it to ArchRProject.filt
+ArchRProject.filt <- loadArchRProject(args$archr_directory)[sample_metadata$cell]
 
 ###########################
 ## Update ArchR metadata ##
 ###########################
 
+#LJK - modify
+#very common line that goes wrong 
+#.[cell%in%rownames(ArchRProject.filt)] %>% setkey(cell) %>% .[rownames(ArchRProject.filt)]
+#gets wrong names, as rownames() returns either nothing or the wrong names, with $cellNames directly go to the right column with cell names
 sample_metadata.to.archr <- sample_metadata %>% 
-  .[cell%in%rownames(ArchRProject.filt)] %>% setkey(cell) %>% .[rownames(ArchRProject.filt)] %>%
+  .[cell%in%ArchRProject.filt$cellNames] %>% setkey(cell) %>% .[ArchRProject.filt$cellNames] %>%
   as.data.frame() %>% tibble::column_to_rownames("cell")
 
 stopifnot(all(rownames(sample_metadata.to.archr) == rownames(getCellColData(ArchRProject.filt))))
@@ -96,4 +103,6 @@ getGroupBW(
 )
 
 # Create a completion token
-file.create(file.path(io$archR.directory,sprintf("/GroupBigWigs/%s/completed.txt",args$group_by)))
+#LJK - modify
+#changed from io$archR.directory to args$archr_direcotry, more flexible and consistent.
+file.create(file.path(args$archr_directory,sprintf("/GroupBigWigs/%s/completed.txt",args$group_by)))

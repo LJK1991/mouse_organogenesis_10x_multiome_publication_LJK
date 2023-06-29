@@ -11,50 +11,28 @@ suppressPackageStartupMessages(library(argparse))
 #########
 
 io <- list()
-if (grepl("ricard",Sys.info()['nodename'])) {
-  io$basedir <- "/Users/ricard/data/gastrulation_multiome_10x"
-  io$atlas.basedir <- "/Users/ricard/data/gastrulation10x"
-  io$gene_metadata <- "/Users/ricard/data/ensembl/mouse/v87/BioMart/all_genes/Mmusculus_genes_BioMart.87.txt"
-} else if (Sys.info()[['nodename']]=="BI2404M") {
-  io$basedir <- "/Users/argelagr/data/gastrulation_multiome_10x/test"
-  io$atlas.basedir <- "/Users/argelagr/data/gastrulation10x"
-  io$gene_metadata <- "/Users/argelagr/data/ensembl/mouse/v87/BioMart/mRNA/Mmusculus_genes_BioMart.87.txt"
-  io$TFs_file <- "/Users/argelagr/data/mm10_regulation/TFs/TFs.txt"
-} else if (grepl("pebble|headstone", Sys.info()['nodename'])) {
-  if (grepl("Clark", Sys.info()['effective_user'])) {
-    io$basedir       <- "/bi/scratch/Stephen_Clark/multiome/resilio"
-    io$rawdata       <- "/bi/scratch/Stephen_Clark/multiome/raw"
-    io$gene_metadata <- "/bi/scratch/Stephen_Clark/annotations/Mmusculus_genes_BioMart.87.txt"
-  } else if (grepl("argelag", Sys.info()['effective_user'])) {
-    io$basedir <-'/bi/group/reik/ricard/data/gastrulation_multiome_10x/test'
-    io$archR.directory <- file.path(io$basedir,"processed/atac/archR")
-    io$gene_metadata <- "/bi/group/reik/ricard/data/ensembl/mouse/v87/BioMart/all_genes/Mmusculus_genes_BioMart.87.txt"
-    io$atlas.basedir <- "/bi/group/reik/ricard/data/pijuansala2019_gastrulation10x"
-    io$TFs_file <- "/bi/group/reik/ricard/data/mm10_regulation/TFs/TFs.txt" 
-  }
-} else if (grepl("bi2228m", Sys.info()['nodename'])) {
-  io$basedir      <- "/Users/clarks/data/multiome/"
-  io$rawdata      <- "/Users/clarks/data/multiome_raw_sub/"
-} else if(grepl('LAPTOP',Sys.info()['nodename'])){
-  io$basedir      <- 'D:/OneDrive - zju.edu.cn/research/bioin/lab/Ricard/data/gastrulation_multiome_10x'
-} else if(grepl('Workstation',Sys.info()['nodename'])){
-  io$basedir      <-'/home/lijingyu/gastrulation/data/gastrulation_multiome_10x'
-  io$gene_metadata <- "/home/lijingyu/gastrulation/data/gastrulation_multiome_10x/Mmusculus_genes_BioMart.87.txt"
-  io$atlas.basedir <- "/home/lijingyu/gastrulation/data/gastrulation10x"
-} else {
-  stop("Computer not recognised")
-}
 
+#io$basedir      <-'/home/lucas/Documents/Work/agrAnalysis'
+#io$gene_metadata <- "/home/lucas/Documents/Work/agrAnalysis/Mmusculus_genes_BioMart.87.txt"
+#io$atlas.basedir <- "/home/lucas/Documents/Work/agrAnalysis/Pijuan"
+#io$metadata <- file.path(io$basedir,"sample_metadata.txt.gz")
+
+io$basedir      <-'/media/draco/lucask/chapter_three/agrAnalysis'
+io$gene_metadata <- "/media/draco/lucask/chapter_three/agrAnalysis/Mmusculus_genes_BioMart.87.txt"
+io$atlas.basedir <- "/media/draco/lucask/chapter_three/agrAnalysis/Pijuan"
 io$metadata <- file.path(io$basedir,"sample_metadata.txt.gz")
+
 
 # TFs
 # io$TFs <- file.path(io$basedir,"results/TFs.txt")
 
+# LJK-modify-230329
+# changed path to sce to 'data/~' as it is stored there. before it was 'processed/~' but cant find it then. 
 # RNA
-io$rna.anndata <- file.path(io$basedir,"processed/rna/anndata.h5ad")
-io$rna.seurat <- file.path(io$basedir,"processed/rna/seurat.rds")
-io$rna.sce <- file.path(io$basedir,"processed/rna/SingleCellExperiment.rds")
-io$rna.tfs.sce <- file.path(io$basedir,"processed/rna/SingleCellExperiment_TFs.rds")
+io$rna.anndata <- file.path(io$basedir,"data/processed/rna/anndata.h5ad")
+io$rna.seurat <- file.path(io$basedir,"data/processed/rna/seurat.rds")
+io$rna.sce <- file.path(io$basedir,"data/processed/rna/SingleCellExperiment.rds")
+io$rna.tfs.sce <- file.path(io$basedir,"data/processed/rna/SingleCellExperiment_TFs.rds")
 io$rna.pseudobulk.sce <- file.path(io$basedir,"results/rna/pseudobulk/celltype/SingleCellExperiment_pseudobulk.rds")
 io$rna.tfs.pseudobulk.sce <- file.path(io$basedir,"results/rna/pseudobulk/celltype/SingleCellExperiment_TFs_pseudobulk.rds")
 io$rna.metacells.sce <- file.path(io$basedir,"results/rna/metacells/all_cells/SingleCellExperiment_metacells.rds")
@@ -67,12 +45,20 @@ io$rna.celltype.marker_tfs.all <- file.path(io$basedir,"results/rna/differential
 io$rna.celltype.marker_tfs.filt <- file.path(io$basedir,"results/rna/differential/pseudobulk/celltype/parsed/marker_tfs_filtered.txt.gz")
 
 # RNA atlas (Pijuan-Sala2019)
+#LJK-added-230331
+#added 'marker_genes' without another subgroup
+#changed rna.atlas.markers_TFs.all to TF file Ricard sent me. ask Q if this is the right file later.
+#made a homemade version as TF.txt was not working (basically called all TF's from marker_genes_upregulated_filtered.txt.gz)
 io$rna.atlas.metadata <- file.path(io$atlas.basedir,"sample_metadata.txt.gz")
 io$rna.atlas.sce <- file.path(io$atlas.basedir,"processed/SingleCellExperiment.rds")
-io$rna.atlas.marker_genes.up <- file.path(io$atlas.basedir,"results/differential/celltypes/genes/all_stages/marker_genes/marker_genes_upregulated_filtered.txt.gz")
+io$rna.atlas.marker_genes <- file.path(io$atlas.basedir,"marker_genes_upregulated_filtered.txt.gz")
+#io$rna.atlas.marker_genes.up <- file.path(io$atlas.basedir,"results/differential/celltypes/genes/all_stages/marker_genes/marker_genes_upregulated_filtered.txt.gz")
+io$rna.atlas.marker_genes.up <- file.path(io$atlas.basedir,"marker_genes_upregulated_filtered.txt.gz")
 io$rna.atlas.marker_genes.all <- file.path(io$atlas.basedir,"results/differential/celltypes/genes/all_stages/marker_genes/marker_genes_upregulated_all.txt.gz")
 io$rna.atlas.marker_TFs.up <- file.path(io$atlas.basedir,"results/differential/celltypes/TFs/TF_markers/marker_TFs_upregulated_filtered.txt.gz")
-io$rna.atlas.marker_TFs.all <- file.path(io$atlas.basedir,"results/differential/celltypes/TFs/TF_markers/marker_TFs_upregulated_all.txt.gz")
+#io$rna.atlas.marker_TFs.all <- file.path(io$atlas.basedir,"results/differential/celltypes/TFs/TF_markers/marker_TFs_upregulated_all.txt.gz")
+#io$rna.atlas.marker_TFs.all <- file.path("/media/draco/lucask/chapter_three/agrAnalysis/Pijuan/Homemade_TFall.txt.gz")
+io$rna.atlas.marker_TFs.all <- file.path(io$atlas.basedir,"marker_TFs_upregulated_all.txt.gz")
 io$rna.atlas.differential <- file.path(io$atlas.basedir,"results/differential")
 # io$rna.atlas.average_expression_per_celltype <- file.path(io$atlas.basedir,"results/marker_genes/all_stages/avg_expr_per_celltype_and_gene.txt.gz")
 io$rna.atlas.sce.pseudobulk <- file.path(io$atlas.basedir,"results/pseudobulk/SingleCellExperiment_pseudobulk.rds")
@@ -117,8 +103,8 @@ io$pijuansala.basedir <- file.path(io$basedir,"public_datasets/Pijuan-Sala_2020"
 io$pijuansala.archR.directory <- file.path(io$pijuansala.basedir,"data/processed/archR")
 
 # paga
-io$paga.connectivity <- file.path(io$atlas.basedir,"results/paga/paga_connectivity.csv")
-io$paga.coordinates <- file.path(io$atlas.basedir,"results/paga/paga_coordinates.csv")
+io$paga.connectivity <- file.path(io$atlas.basedir,"paga_connectivity.csv")
+io$paga.coordinates <- file.path(io$atlas.basedir,"paga_coordinates.csv")
 
 # Virtual ChIP-seq
 # io$tf2peak_cor.se <- file.path(io$basedir,"results/rna_atac/rna_vs_acc/pseudobulk/TFexpr_vs_peakAcc/cor_TFexpr_vs_peakAcc_SummarizedExperiment.rds")
@@ -150,8 +136,11 @@ opts$stages <- c(
   "E8.5",
   "E8.75"
 )
-
+#LJK-modify-230328
+#changed samples
 opts$samples <- c(
+  "Day_4_L",
+  "Day_4_R",
   "E7.5_rep1",
   "E7.5_rep2",
   "E7.75_rep1",
@@ -180,6 +169,8 @@ opts$samples <- c(
 # )
 
 opts$sample2stage <- c(
+  "Day_4_L" = "E7.5",
+  "Day_4_R" = "E7.5",
   "E7.5_rep1" = "E7.5",
   "E7.5_rep2" = "E7.5",
   "E7.75_rep1" = "E7.75",

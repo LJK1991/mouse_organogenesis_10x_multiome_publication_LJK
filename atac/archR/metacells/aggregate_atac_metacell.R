@@ -18,6 +18,9 @@ p$add_argument('--metacell_min_frags',     type="integer",    default=1e5,     h
 p$add_argument('--outdir',          type="character",               help='Output directory')
 args <- p$parse_args(commandArgs(TRUE))
 
+#LJK - debugging
+#print("testing in arguments")
+print(args)
 ###################
 ## Load settings ##
 ###################
@@ -81,7 +84,10 @@ pdf(file.path(args$outdir,"nfrags_metacell_threshold.pdf"), width=8, height=4)
 print(p)
 dev.off()
 
-metacells.to.use <- intersect(sample_metadata$cell, nfrags_per_metacell.dt[nfrags>=args$metacell_min_frags,metacell])
+#LJK-230505-modify
+#changed sample_metadata$cell to sample_metadat$metacell, the intersect was going wrong otherwise.
+#Another SEAcell naming issue
+metacells.to.use <- intersect(sample_metadata$metacell, nfrags_per_metacell.dt[nfrags>=args$metacell_min_frags,metacell])
 sample_metadata <- sample_metadata[metacell%in%metacells.to.use]
 cell2metacell.dt <- cell2metacell.dt[metacell%in%metacells.to.use]
 
@@ -115,8 +121,12 @@ stopifnot(args$matrices%in%getAvailableMatrices(ArchRProject))
 ## Add metacell assignment to ArchR object ##
 #############################################
 
+#LJK - modify
+#this does not work anymore
+#.[cell%in%rownames(ArchRProject)] %>% setkey(cell) %>% .[rownames(ArchRProject)] %>%
+#changed it
 tmp <- sample_metadata %>% 
-  .[cell%in%rownames(ArchRProject)] %>% setkey(cell) %>% .[rownames(ArchRProject)] %>%
+  .[cell%in%ArchRProject$cellNames] %>% setkey(cell) %>% .[ArchRProject$cellNames] %>%
   as.data.frame() %>% tibble::column_to_rownames("cell")
 stopifnot(all(rownames(tmp) == rownames(getCellColData(ArchRProject))))
 ArchRProject <- addCellColData(
@@ -159,9 +169,12 @@ for (i in args$matrices) {
 ## Define metacell metadata ##
 ##############################
 
+#LJK - modify
+#changed setkey(cell) --> setkey(metacell)
+#removed "genotype" from the list of columns to extract
 metacell_metadata.dt <- sample_metadata %>%
-  .[cell%in%colnames(atac_metacells.se)] %>% setkey(cell) %>% .[colnames(atac_metacells.se)] %>%
-  .[,c("metacell", "cell", "sample", "stage", "genotype",  "celltype", "closest.cell")] %>%
+  .[metacell%in%colnames(atac_metacells.se)] %>% setkey(metacell) %>% .[colnames(atac_metacells.se)] %>%
+  .[,c("metacell", "cell", "sample", "stage", "celltype", "closest.cell")] %>%
   merge(cell2metacell.dt[,.(ncells=.N),by="metacell"],by="metacell")
 
 # Add QC stats

@@ -19,6 +19,8 @@ p$add_argument('--threads',     type="integer",    default=1,    help='Number of
 p$add_argument('--outdir',          type="character",                               help='Output directory')
 
 args <- p$parse_args(commandArgs(TRUE))
+print(args$samples)
+print(args$fragments_files)
 
 ## START TEST ##
 # args$fragments_files <- c(

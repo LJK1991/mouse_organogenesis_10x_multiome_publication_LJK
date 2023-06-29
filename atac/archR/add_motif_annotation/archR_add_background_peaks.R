@@ -15,10 +15,12 @@ p$add_argument('--threads',     type="integer",    default=1,    help='Number of
 
 args <- p$parse_args(commandArgs(TRUE))
 
+#LJK - modify
+#commented out test as it would overwrite some settings
 ## START TEST ##
-args$number_background_peaks <- 50
-args$method <- "chromVAR"
-args$threads <- 1
+#args$number_background_peaks <- 50
+#args$method <- "chromVAR"
+#args$threads <- 1
 ## END TEST ##
 
 #####################
@@ -63,13 +65,15 @@ ArchRProject <- addBgdPeaks(
 ##########
 ## TEST ##
 ##########
+#LJK - modify
+#commented out test
 
-R.utils::sourceDirectory("/bi/group/reik/ricard/scripts/git/archR/R", verbose=T, modifiedOnly=FALSE)
+#R.utils::sourceDirectory("/bi/group/reik/ricard/scripts/git/archR/R", verbose=T, modifiedOnly=FALSE)
 
-ArchRProj = ArchRProject
-nIterations = 50
-w = 0.1
-binSize = 50
-seed = 1
-method = "chromVAR"
+#ArchRProj = ArchRProject
+#nIterations = 50
+#w = 0.1
+#binSize = 50
+#seed = 1
+#method = "chromVAR"
 

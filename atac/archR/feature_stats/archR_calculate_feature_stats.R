@@ -42,14 +42,16 @@ dir.create(dirname(args$outfile), showWarnings=F)
 ########################
 ## Load cell metadata ##
 ########################
-
+#LJK - modify
+#removed genotype
 if (grepl("genotype",args$group_by)) {
   cell_metadata.dt <- fread(args$cells_metadata) %>%
-    .[,celltype_genotype:=sprintf("%s-%s",celltype,genotype)] %>%
     .[pass_atacQC==TRUE & doublet_call==FALSE]
+#   %>% .[,celltype_genotype:=sprintf("%s-%s",celltype,genotype)]
 } else {
   cell_metadata.dt <- fread(args$cells_metadata) %>%
-    .[pass_atacQC==TRUE & doublet_call==FALSE & genotype=="WT"]
+    .[pass_atacQC==TRUE & doublet_call==FALSE]
+#   %>% .[genotype == "WT"]
 }
 
 stopifnot(args$group_by%in%colnames(cell_metadata.dt))
@@ -58,12 +60,14 @@ cell_metadata.dt <- cell_metadata.dt[!is.na(cell_metadata.dt[[args$group_by]])]
 ############################
 ## Load metacell metadata ##
 ############################
-
+#LJK - modify
+#no genotype
 if (grepl("genotype",args$group_by)) {
-  metacell_metadata.dt <- fread(args$metacells_metadata) %>%
-    .[,celltype_genotype:=sprintf("%s-%s",celltype,genotype)]
+  metacell_metadata.dt <- fread(args$metacells_metadata)
+# %>% .[,celltype_genotype:=sprintf("%s-%s",celltype,genotype)]
 } else {
-  metacell_metadata.dt <- fread(args$metacells_metadata) %>% .[genotype=="WT"]
+  metacell_metadata.dt <- fread(args$metacells_metadata)
+# %>% .[genotype == "WT"]
 }
 
 stopifnot(args$group_by%in%colnames(metacell_metadata.dt))
@@ -114,6 +118,38 @@ print(sprintf("Fetching pseudobulk ATAC %s matrix...",args$matrix))
 atac_pseudobulk.se <- readRDS(args$atac_matrix_pseudobulk)[,groups.to.use]
 atac_pseudobulk.se
 
+#LJK - add
+#sce rownames were not in same order. crude function to fix this
+#!!!!!NOTE!!!!!! although i use this function more than once, they are not all exactly the same
+#some scripts required small adjustments for colData and rowData.
+sortSummarizedExperiment <- function(se, matrix_name) {
+	tmp_assay <- assay(se)
+	tmp_colDat <- colData(se)
+
+	#sorting the matrix
+	tmp_assay <- tmp_assay[sort(rownames(tmp_assay)),]
+	#put assay in list
+	tmp_assay_list <- list()
+	if (matrix_name == "PeakMatrix"){
+		tmp_assay_list$PeakMatrix <- tmp_assay
+	} 
+	#make new gRanges
+	tmp_gRanges.df <- data.frame(seqnames=sapply(str_split(rownames(tmp_assay),":"),"[[",1),
+								 ranges=sapply(str_split(rownames(tmp_assay),":"),"[[",2),
+								 strand=rep("*",length(rownames(tmp_assay))))
+	tmp_gRanges.df$start <- sapply(str_split(tmp_gRanges.df$ranges,"-"),"[[",1)
+	tmp_gRanges.df$end <- sapply(str_split(tmp_gRanges.df$ranges,"-"),"[[",2)
+	tmp_gRanges <- makeGRangesFromDataFrame(tmp_gRanges.df)
+
+	new_se <- SummarizedExperiment(assays=tmp_assay_list,rowRanges=tmp_gRanges,colData=tmp_colDat)
+	return(new_se)
+}
+
+if (args$matrix == "PeakMatrix"){
+  atac_cells.se <- sortSummarizedExperiment(atac_cells.se, args$matrix)
+  atac_metacells.se <- sortSummarizedExperiment(atac_metacells.se, args$matrix)
+  atac_pseudobulk.se <- sortSummarizedExperiment(atac_pseudobulk.se, args$matrix)
+}
 # Sanity checks
 stopifnot(rownames(atac_cells.se)==rownames(atac_pseudobulk.se))
 stopifnot(rownames(atac_cells.se)==rownames(atac_metacells.se))

@@ -41,14 +41,16 @@ dir.create(args$outdir, showWarnings=F, recursive=T)
 ########################
 ## Load cell metadata ##
 ########################
-
+#LJK- modify
+#no genotype
 if (grepl("genotype",args$group_by)) {
   sample_metadata <- fread(args$metadata) %>%
     .[,celltype_genotype:=sprintf("%s-%s",celltype,genotype)] %>%
     .[pass_atacQC==TRUE & doublet_call==FALSE]
 } else {
   sample_metadata <- fread(args$metadata) %>%
-    .[pass_atacQC==TRUE & doublet_call==FALSE & genotype=="WT"]
+    .[pass_atacQC==TRUE & doublet_call==FALSE]
+  # %>% .[genotype = "WT"]
 }
 stopifnot(args$group_by%in%colnames(sample_metadata))
 sample_metadata <- sample_metadata[!is.na(sample_metadata[[args$group_by]])]
@@ -84,8 +86,11 @@ stopifnot(args$matrices%in%getAvailableMatrices(ArchRProject))
 ## Update ArchR metadata ##
 ###########################
 
+#LJK - modify
+# changed name extraction
+# .[cell%in%rownames(ArchRProject)] %>% setkey(cell) %>% .[rownames(ArchRProject)] %>%
 sample_metadata.to.archr <- sample_metadata %>% 
-  .[cell%in%rownames(ArchRProject)] %>% setkey(cell) %>% .[rownames(ArchRProject)] %>%
+  .[cell%in%ArchRProject$cellNames] %>% setkey(cell) %>% .[ArchRProject$cellNames] %>%
   as.data.frame() %>% tibble::column_to_rownames("cell")
 
 stopifnot(all(rownames(sample_metadata.to.archr) == rownames(getCellColData(ArchRProject))))

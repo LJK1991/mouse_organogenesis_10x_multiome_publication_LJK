@@ -33,11 +33,20 @@ dir.create(args$outdir, showWarnings=F)
 ## Load data ##
 ###############
 
+#LJK-modify-230509
+#change the import of the gene_metadata, as the columns names are slightly different when its created with bioMart
 # Load gene metadata
-gene_metadata <- fread(args$gene_metadata) %>% 
-  .[,chr:=as.factor(sub("chr","",chr))] %>%
-  setnames("symbol","gene") %>%
-  .[, c("chr","start","end","gene","ens_id","strand")]
+gene_metadata <- fread(args$gene_metadata) %>%
+  setnames(c("ensembl_gene_id","chromosome_name","external_gene_name","start_position","end_position","strand"),c("ens_id","chr","gene","start","end","strand")) %>%
+  .[,c("chr","start","end","gene","ens_id","strand")]
+  
+gene_metadata$strand <- sapply(gene_metadata$strand, function(x) if(x == 1){x <- '+'}else{x <- '-'})
+gene_metadata <-  gene_metadata[gene_metadata$chr != 'MT',]
+# Load gene metadata
+#gene_metadata <- fread(args$gene_metadata) %>% 
+#  .[,chr:=as.factor(sub("chr","",chr))] %>%
+#  setnames("symbol","gene") %>%
+#  .[, c("chr","start","end","gene","ens_id","strand")]
 
 # Load peak metadata
 peakSet.dt <- fread(args$peak_metadata) %>%

@@ -17,33 +17,46 @@ import argparse
 #########
 ## I/O ##
 #########
-
 io = {}
 
-host = os.uname()[1]
-if search("ricard", host):
-	io["basedir"] = "/Users/ricard/data/gastrulation_multiome_10x/test"
-	io["cellranger_output"] = "/Users/ricard/data/gastrulation_multiome_10x/original"
-	io["gene_metadata"] = "/Users/ricard/data/ensembl/mouse/v87/BioMart/all_genes/Mmusculus_genes_BioMart.87.txt"
-	io["gene_metadata_gtf"] = "/Users/ricard/data/ensembl/mouse/v98/GTF/Mus_musculus.GRCm38.98.gtf.gz"
-elif search("Workstation", host):
-    io["basedir"]="/home/lijingyu/gastrulation/data/gastrulation_multiome_10x"                   
-    io["gene_metadata"]='/home/lijingyu/gastrulation/data/ensembl/mouse/v87/BioMart/mRNA/Mmusculus_genes_BioMart.87.txt'
-elif search("BI2404M", host):
-	io["basedir"] = "/Users/argelagr/data/gastrulation_multiome_10x/test"
-	io["gene_metadata"] = "/Users/argelagr/data/ensembl/mouse/v87/BioMart/all_genes/Mmusculus_genes_BioMart.87.txt"
-elif search("pebble|headstone", host):
-	io["basedir"] = "/bi/group/reik/ricard/data/gastrulation_multiome_10x/test"
-	io["cellranger_output"] = "/bi/group/reik/ricard/data/gastrulation_multiome_10x/original"
-	io["gene_metadata"] = "/bi/group/reik/ricard/data/ensembl/mouse/v87/BioMart/all_genes/Mmusculus_genes_BioMart.87.txt"
-	io["gene_metadata_gtf"] = "/bi/group/reik/ricard/data/ensembl/mouse/v98/GTF/Mus_musculus.GRCm38.98.gtf.gz"
-	
-else:
-	print("Computer not recognised"); exit()
+#LJK-modify-230406
+#speaks for itself doesnt it? added my file.paths
+#host = os.uname()[1]
+#if search("ricard", host):
+#	io["basedir"] = "/Users/ricard/data/gastrulation_multiome_10x/test"
+#	io["cellranger_output"] = "/Users/ricard/data/gastrulation_multiome_10x/original"
+#	io["gene_metadata"] = "/Users/ricard/data/ensembl/mouse/v87/BioMart/all_genes/Mmusculus_genes_BioMart.87.txt"
+#	io["gene_metadata_gtf"] = "/Users/ricard/data/ensembl/mouse/v98/GTF/Mus_musculus.GRCm38.98.gtf.gz"
+#elif search("Workstation", host):
+#    io["basedir"]="/home/lijingyu/gastrulation/data/gastrulation_multiome_10x"                   
+#    io["gene_metadata"]='/home/lijingyu/gastrulation/data/ensembl/mouse/v87/BioMart/mRNA/Mmusculus_genes_BioMart.87.txt'
+#elif search("BI2404M", host):
+#	io["basedir"] = "/Users/argelagr/data/gastrulation_multiome_10x/test"
+#	io["gene_metadata"] = "/Users/argelagr/data/ensembl/mouse/v87/BioMart/all_genes/Mmusculus_genes_BioMart.87.txt"
+#elif search("pebble|headstone", host):
+#	io["basedir"] = "/bi/group/reik/ricard/data/gastrulation_multiome_10x/test"
+#	io["cellranger_output"] = "/bi/group/reik/ricard/data/gastrulation_multiome_10x/original"
+#	io["gene_metadata"] = "/bi/group/reik/ricard/data/ensembl/mouse/v87/BioMart/all_genes/Mmusculus_genes_BioMart.87.txt"
+#	io["gene_metadata_gtf"] = "/bi/group/reik/ricard/data/ensembl/mouse/v98/GTF/Mus_musculus.GRCm38.98.gtf.gz"
+#	
+#else:
+#	print("Computer not recognised"); exit()
+
+io["basedir"] = "/home/lucas/Documents/agrAnalysis"
+io["cellranger_output"] = "/home/lucas/Documents/Work/agrAnalysis/data/original/"
+io["gene_metadata"] = "/home/lucas/Documents/Work/agrAnalysis/Mmusculus_genes_BioMart.87.txt"
+io["gene_metadata_gtf"] = "/home/lucas/Documents/Work/agrAnalysis/genes.gtf"
+
 
 io["metadata"] = io["basedir"] + "/sample_metadata.txt.gz"
 io["anndata"] = io["basedir"] + "/processed/rna/anndata.h5ad"
 io["anndata_scvelo"] = io["basedir"] + "/processed/rna/velocyto/anndata_scvelo.h5ad"
+
+#LJK - added - 230628
+#added this for the cell Oracle script
+#Cell orcale
+io["atlas_basedir"] = "/media/draco/lucask/chapter_three/agrAnalysis/Pijuan"
+io["rna_atlas_marker_TFs_all"] = io["atlas_basedir"] + "/marker_TFs_upregulated_all.txt.gz"
 
 #############
 ## Options ##
@@ -52,9 +65,11 @@ io["anndata_scvelo"] = io["basedir"] + "/processed/rna/velocyto/anndata_scvelo.h
 opts = {}
 
 opts["samples"] = [
+	"Day_4_L",
+	"Day_4_R",
 	"E7.5_rep1",
 	"E7.5_rep2",
-  	"E7.75_rep1",
+	"E7.75_rep1",
 	"E8.0_rep1",
 	"E8.0_rep2",
 	"E8.5_rep1",

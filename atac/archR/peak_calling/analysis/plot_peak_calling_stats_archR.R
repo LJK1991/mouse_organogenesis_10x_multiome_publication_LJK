@@ -75,7 +75,10 @@ atac_peakMatrix_cells.se <- readRDS(args$peak_matrix_file)[,sample_metadata$cell
 
 print("Fetching pseudobulk ATAC Peak Matrix...")
 
-atac_peakMatrix_pseudobulk.se <- readRDS(args$pseudobulk_peak_matrix_file)[,opts$celltypes]
+#LJK - modify - 230613
+# changed opts$celltypes to unique(sample_metadata$celltype) to not get an index out of bounds error for calling celltypes that dont exist in the dataset.
+#atac_peakMatrix_pseudobulk.se <- readRDS(args$pseudobulk_peak_matrix_file)[,opts$celltypes]
+atac_peakMatrix_pseudobulk.se <- readRDS(args$pseudobulk_peak_matrix_file)[,unique(sample_metadata$celltype)]
 
 # Normalise
 # assay(atac_peakMatrix_pseudobulk.se,"logcounts") <- log(1e6*(sweep(assay(atac_peakMatrix_pseudobulk.se),2,colSums(assay(atac_peakMatrix_pseudobulk.se),na.rm=T),"/"))+1)
@@ -83,6 +86,36 @@ atac_peakMatrix_pseudobulk.se <- readRDS(args$pseudobulk_peak_matrix_file)[,opts
 ###################
 ## Sanity checks ##
 ###################
+#LJK - add - 230613
+#problem we had before, PeakMatrix rownames are not in same order. have to sort them
+#add sortSummarizedExperiment options that performs the job crudely but it works.
+
+
+sortSummarizedExperiment <- function(se, matrix_name) {
+	tmp_assay <- assay(se)
+	tmp_colDat <- colData(se)
+
+	#sorting the matrix
+	tmp_assay <- tmp_assay[sort(rownames(tmp_assay)),]
+	#put assay in list
+	tmp_assay_list <- list()
+	if (matrix_name == "PeakMatrix"){
+		tmp_assay_list$PeakMatrix <- tmp_assay
+	} 
+	#make new gRanges
+	tmp_gRanges.df <- data.frame(seqnames=sapply(str_split(rownames(tmp_assay),":"),"[[",1),
+								 ranges=sapply(str_split(rownames(tmp_assay),":"),"[[",2),
+								 strand=rep("*",length(rownames(tmp_assay))))
+	tmp_gRanges.df$start <- sapply(str_split(tmp_gRanges.df$ranges,"-"),"[[",1)
+	tmp_gRanges.df$end <- sapply(str_split(tmp_gRanges.df$ranges,"-"),"[[",2)
+	tmp_gRanges <- makeGRangesFromDataFrame(tmp_gRanges.df)
+
+	new_se <- SummarizedExperiment(assays=tmp_assay_list,rowRanges=tmp_gRanges,colData=tmp_colDat)
+	return(new_se)
+}
+mtx_name <- "PeakMatrix"
+atac_peakMatrix_cells.se <- sortSummarizedExperiment(atac_peakMatrix_cells.se, mtx_name)
+atac_peakMatrix_pseudobulk.se <- sortSummarizedExperiment(atac_peakMatrix_pseudobulk.se, mtx_name)
 
 stopifnot(rownames(atac_peakMatrix_cells.se)==rownames(atac_peakMatrix_pseudobulk.se))
 

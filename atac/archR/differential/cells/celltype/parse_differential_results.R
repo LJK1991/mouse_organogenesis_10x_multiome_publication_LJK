@@ -31,28 +31,49 @@ dir.create(args$outdir, showWarnings=F, recursive=T)
 stats.dt <- data.table(celltypeA=as.character(NA), celltypeB=as.character(NA), groupA_N=as.integer(NA), groupB_N=as.integer(NA), included=as.logical(NA))
 diff_results_list <- list()
 
-# i <- "Visceral_endoderm"; j <- "Surface_ectoderm"
-for (i in 1:length(opts$celltypes)) {
-  for (j in i:length(opts$celltypes)) {
-    
-    if (i!=j) {
-      file <- file.path(args$diff_results_dir,sprintf("%s_vs_%s.txt.gz",opts$celltypes[[i]],opts$celltypes[[j]]))
-      if (file.exists(file)) {
-        tmp <- fread(file) %>% 
-          .[,c("celltypeA","celltypeB"):=list(opts$celltypes[[i]],opts$celltypes[[j]])]
-        
-        if (tmp[celltypeA==opts$celltypes[[i]],groupA_N][1]>=args$min_cells & tmp[celltypeB==opts$celltypes[[j]],groupB_N][1]>=args$min_cells) {
-          stats.dt <- rbind(stats.dt,data.table(celltypeA=opts$celltypes[[i]], celltypeB=opts$celltypes[[j]], groupA_N=tmp[celltypeA==opts$celltypes[[i]],groupA_N][1], groupB_N=tmp[celltypeB==opts$celltypes[[j]],groupB_N][1], included=TRUE))
-          diff_results_list[[sprintf("%s_vs_%s",opts$celltypes[[i]],opts$celltypes[[j]])]] <- tmp
-        } else {
-          stats.dt <- rbind(stats.dt,data.table(celltypeA=opts$celltypes[[i]], celltypeB=opts$celltypes[[j]], groupA_N=tmp[celltypeA==opts$celltypes[[i]],groupA_N][1], groupB_N=tmp[celltypeB==opts$celltypes[[j]],groupB_N][1], included=FALSE)) 
-        }
-      } else {
-        print(sprintf("%s not found...",file))
-      }
+#LJK-230508-modify
+#changed the code so it has less combinations and only runs on the files which are present instead of all possible combinations
+
+diff_cell_list <- list.files(args$diff_results_dir) %>% .[-which(.=="parsed")]
+for (i in diff_cell_list){
+  file <- file.path(args$diff_results_dir, i)
+  tmp_celltypes <- unlist(str_split(gsub(".txt.gz","",i),"_vs_"))
+  if(file.exists(file)) {
+    tmp <- fread(file) %>% .[,c("celltypeA","celltypeB"):=list(tmp_celltypes[1],tmp_celltypes[2])]
+    if (is.na(tmp[celltypeA==tmp_celltypes[1],groupA_N][1]) == T | is.na(tmp[celltypeB==tmp_celltypes[2],groupB_N][1]) == T) {
+          stats.dt <- rbind(stats.dt,data.table(celltypeA=tmp_celltypes[1], celltypeB=tmp_celltypes[2], groupA_N=tmp[celltypeA==tmp_celltypes[1],groupA_N][1], groupB_N=tmp[celltypeB==tmp_celltypes[2],groupB_N][1], included=FALSE)) 
+    } else if (tmp[celltypeA==tmp_celltypes[1],groupA_N][1]>=args$min_cells & tmp[celltypeB==tmp_celltypes[2],groupB_N][1]>=args$min_cells) {
+          stats.dt <- rbind(stats.dt,data.table(celltypeA=tmp_celltypes[1], celltypeB=tmp_celltypes[2], groupA_N=tmp[celltypeA==tmp_celltypes[1],groupA_N][1], groupB_N=tmp[celltypeB==tmp_celltypes[2],groupB_N][1], included=TRUE))
+          diff_results_list[[sprintf("%s_vs_%s",tmp_celltypes[1],tmp_celltypes[2])]] <- tmp
+    } else {
+          stats.dt <- rbind(stats.dt,data.table(celltypeA=tmp_celltypes[1], celltypeB=tmp_celltypes[2], groupA_N=tmp[celltypeA==tmp_celltypes[1],groupA_N][1], groupB_N=tmp[celltypeB==tmp_celltypes[2],groupB_N][1], included=FALSE)) 
     }
+  } else {
+    print(sprintf("%s not found...",file))
   }
 }
+# i <- "Visceral_endoderm"; j <- "Surface_ectoderm"
+#for (i in 1:length(opts$celltypes)) {
+#  for (j in i:length(opts$celltypes)) {
+#    
+#    if (i!=j) {
+#      file <- file.path(args$diff_results_dir,sprintf("%s_vs_%s.txt.gz",opts$celltypes[[i]],opts$celltypes[[j]]))
+#      if (file.exists(file)) {
+#        tmp <- fread(file) %>% 
+#          .[,c("celltypeA","celltypeB"):=list(opts$celltypes[[i]],opts$celltypes[[j]])]
+#        
+#        if (tmp[celltypeA==opts$celltypes[[i]],groupA_N][1]>=args$min_cells & tmp[celltypeB==opts$celltypes[[j]],groupB_N][1]>=args$min_cells) {
+#          stats.dt <- rbind(stats.dt,data.table(celltypeA=opts$celltypes[[i]], celltypeB=opts$celltypes[[j]], groupA_N=tmp[celltypeA==opts$celltypes[[i]],groupA_N][1], groupB_N=tmp#[celltypeB==opts$celltypes[[j]],groupB_N][1], included=TRUE))
+#          diff_results_list[[sprintf("%s_vs_%s",opts$celltypes[[i]],opts$celltypes[[j]])]] <- tmp
+#        } else {
+#          stats.dt <- rbind(stats.dt,data.table(celltypeA=opts$celltypes[[i]], celltypeB=opts$celltypes[[j]], groupA_N=tmp[celltypeA==opts$celltypes[[i]],groupA_N][1], groupB_N=tmp[celltypeB==opts$celltypes[[j]],groupB_N][1], included=FALSE)) 
+#        }
+#      } else {
+#        print(sprintf("%s not found...",file))
+#      }
+#    }
+#  }
+#}
  
 ##########
 ## Save ##

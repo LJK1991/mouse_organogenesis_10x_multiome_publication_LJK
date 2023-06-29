@@ -1,35 +1,62 @@
-here::i_am("rna_atac/gene_regulatory_networks/metacells/build_global_GRN_metacells.R")
+here::i_am("rna_atac/gene_regulatory_networks/metacells/trajectories/build_GRN_metacells_trajectory.R")
 
 source(here::here("settings.R"))
 source(here::here("utils.R"))
 
-library(cowplot)
-library(furrr)
+suppressPackageStartupMessages(library(cowplot))
+suppressPackageStartupMessages(library(furrr))
 
-#####################
-## Define settings ##
-#####################
+################################
+## Initialize argument parser ##
+################################
+
+#LJK 230626
+# Made it so that the entire script can be run with input options
+
+#LJK - note
+# is --trajectory even needed? is never called anywhere
+
+p <- ArgumentParser(description='')
+p$add_argument('--trajectory', type="character", help="trajectory file (rna)")
+p$add_argument('--sce',                type="character",              help='RNA SingleCellExperiment of trajectory(metacells)')
+p$add_argument('--tf2gene_virtual_chip', type="character",help="Virtual CHiP-seq")
+p$add_argument('--trajectory_name', type="character",help="name of trajectory")
+p$add_argument('--min_chip_score', type="numeric", default=0.15, help='minimum CHiP-score')
+p$add_argument('--max_distance', type="numeric", default=5e4, help="maximum distance") #to what? lets figure out
+p$add_argument('--threads', type="numeric", default=4, help="threads") 
+p$add_argument('--outdir',          type="character",                help='Output directory')
+args <- p$parse_args(commandArgs(TRUE))
+
+##########
+## TEST ##
+##########
 
 # I/O
-io$basedir <- file.path(io$basedir,"test")
-io$trajectory <- file.path("results/rna/trajectories/nmp/nmp_trajectory.txt.gz")
-io$sce <- file.path(io$basedir, 'results/rna/metacells/trajectories/nmp/SingleCellExperiment_metacells.rds')
-io$tf2gene_virtual_chip <- file.path(io$basedir,"results/rna_atac/virtual_chipseq/metacells/trajectories/nmp/JASPAR/TF2gene_after_virtual_chip.txt.gz")
-io$outdir <-  file.path(io$basedir,"results/rna_atac/gene_regulatory_networks/metacells/trajectories/nmp"); dir.create(io$outdir, showWarnings = F, recursive = T)
+#io$basedir <- file.path(io$basedir,"test")
+#io$trajectory <- file.path("results/rna/trajectories/nmp/nmp_trajectory.txt.gz")
+#io$sce <- file.path(io$basedir, 'results/rna/metacells/trajectories/nmp/SingleCellExperiment_metacells.rds')
+#io$tf2gene_virtual_chip <- file.path(io$basedir,"results/rna_atac/virtual_chipseq/metacells/trajectories/nmp/JASPAR/TF2gene_after_virtual_chip.txt.gz")
+#io$outdir <-  file.path(io$basedir,"results/rna_atac/gene_regulatory_networks/metacells/trajectories/nmp"); dir.create(io$outdir, showWarnings = F, recursive = T)
 
 # Options
 # opts$celltypes <- setdiff(opts$celltypes, c("ExE_endoderm","ExE_ectoderm","Parietal_endoderm"))
-opts$trajectory_name <- "nmp"
-opts$min_chip_score <- 0.15
-opts$max_distance <- 5e4
-opts$ncores <- 4
+#opts$trajectory_name <- "nmp"
+#opts$min_chip_score <- 0.15
+#opts$max_distance <- 5e4
+#opts$ncores <- 4
+
+dir.create(args$outdir, showWarnings=F)
 
 ####################################################
 ## Load TF2gene links based on in silico ChIP-seq ##
 ####################################################
 
-tf2gene_chip.dt <- fread(io$tf2gene_virtual_chip) %>%
-  .[chip_score>=opts$min_chip_score & dist<=opts$max_distance] %>% 
+#tf2gene_chip.dt <- fread(io$tf2gene_virtual_chip) %>%
+#  .[chip_score>=opts$min_chip_score & dist<=opts$max_distance] %>% 
+#  .[,c("tf","gene")] %>% unique # Only keep TF-gene links
+  
+tf2gene_chip.dt <- fread(args$tf2gene_virtual_chip) %>%
+  .[chip_score>=args$min_chip_score & dist<=args$max_distance] %>% 
   .[,c("tf","gene")] %>% unique # Only keep TF-gene links
 
 # tf2gene_chip.dt[tf=="T"] %>% View
@@ -38,7 +65,8 @@ tf2gene_chip.dt <- fread(io$tf2gene_virtual_chip) %>%
 ## Load RNA expression data ##
 ##############################
 
-sce <- readRDS(io$sce)
+#sce <- readRDS(io$sce)
+sce <- readRDS(args$sce)
 
 # (Optional) restrict to marker genes
 # marker_genes.dt <- fread(io$rna.atlas.marker_genes)
@@ -76,9 +104,9 @@ print(sprintf("Number of genes: %s",length(genes)))
 # opt_ridge <- glmnet(x, y, alpha = 0, lambda  = cvfit$lambda.min)
 # df <- data.frame(tf=rownames(opt_ridge$beta), gene=i, beta=as.matrix(opt_ridge$beta)[,1])
 
-if (opts$ncores>1){
-  plan(multicore, workers=opts$ncores)
-  genes_split <- split(genes, cut(seq_along(genes), opts$ncores, labels = FALSE)) 
+if (args$threads>1){
+  plan(multicore, workers=args$threads)
+  genes_split <- split(genes, cut(seq_along(genes), args$threads, labels = FALSE)) 
 } else {
   plan(sequential)
   genes_split <- list(genes)
@@ -101,5 +129,6 @@ GRN_coef.dt <- genes_split %>% future_map(function(genes) {
 }) %>% rbindlist
 
 # save
-fwrite(GRN_coef.dt, file.path(io$outdir,'global_chip_GRN_coef.txt.gz'), sep="\t")
+#fwrite(GRN_coef.dt, file.path(io$outdir,'global_chip_GRN_coef.txt.gz'), sep="\t")
+fwrite(GRN_coef.dt, file.path(args$outdir,'global_chip_GRN_coef.txt.gz'), sep="\t")
 

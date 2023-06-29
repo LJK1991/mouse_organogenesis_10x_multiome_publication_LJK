@@ -131,6 +131,49 @@ bgdPeaks.se <- bgdPeaks.se[rownames(atac_peakMatrix.se),]
 ## Sanity checks ##
 ###################
 
+#LJK - added - 230619
+#motifmatcher.se and atac_peakMatrix.se rownames were not in same order.
+#written crude function to get them into order.
+
+sortSummarizedExperiment <- function(se, matrix_name) {
+	tmp_assay <- assay(se)
+	tmp_colDat <- colData(se)
+  #copying rowData is specific per summarized matrix, one column (idx) are the indexes of the array.
+  tmp_rowDat <- rowData(se)
+  
+	#sorting the matrix
+	tmp_assay <- tmp_assay[sort(rownames(tmp_assay)),]
+	#put assay in list
+	tmp_assay_list <- list()
+	if (matrix_name == "PeakMatrix"){
+		tmp_assay_list$PeakMatrix <- tmp_assay
+	} else if (matrix_name == "motifMatches"){
+    tmp_assay_list$motifMatches <- tmp_assay
+  }
+	#make new gRanges
+	tmp_gRanges.df <- data.frame(seqnames=sapply(str_split(rownames(tmp_assay),":"),"[[",1),
+								 ranges=sapply(str_split(rownames(tmp_assay),":"),"[[",2),
+								 strand=rep("*",length(rownames(tmp_assay))))
+	tmp_gRanges.df$start <- sapply(str_split(tmp_gRanges.df$ranges,"-"),"[[",1)
+	tmp_gRanges.df$end <- sapply(str_split(tmp_gRanges.df$ranges,"-"),"[[",2)
+	tmp_gRanges <- makeGRangesFromDataFrame(tmp_gRanges.df)
+ 
+  #sorting the rowData
+  tmp_rowDat <- tmp_rowDat[sort(rownames(tmp_rowDat)),]
+  tmp_rowDat$idx <- seq(1, length(rownames(tmp_rowDat)))
+  
+
+	new_se <- SummarizedExperiment(assays=tmp_assay_list,rowRanges=tmp_gRanges,colData=tmp_colDat)
+  rowData(new_se) <- tmp_rowDat
+	return(new_se)
+}
+
+args$matrix <- "motifMatches"
+motifmatcher.se <- sortSummarizedExperiment(motifmatcher.se, args$matrix)
+args$matrix <- "PeakMatrix"
+atac_peakMatrix.se <- sortSummarizedExperiment(atac_peakMatrix.se, args$matrix)
+
+
 stopifnot(rownames(atac_peakMatrix.se)==rownames(motifmatcher.se))
 
 #########################################

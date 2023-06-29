@@ -94,10 +94,14 @@ opts$remove_dim_cor_seq_depth <- TRUE
 ##########################
 ## Load sample metadata ##
 ##########################
-
-metacell_metadata.dt <- fread(args$metadata) %>%
-  .[stage%in%args$stages & genotype=="WT"] %>%
+#LJK - modify
+# due to new SEAcell name storing remove duplicated metacell names (otherwise you're just plotting cells)
+# removed genotype
+metacell_metadata.dt <- fread(args$metadata) %>% 
+  .[!duplicated(metacell)] %>% 
+  .[stage%in%args$stages] %>% 
   .[,log_nFrags_atac:=log10(nFrags_atac)]
+# %>% .[genotype=="WT"]
 
 stopifnot(args$colour_by %in% colnames(metacell_metadata.dt))
 
@@ -188,7 +192,9 @@ if (length(args$batch_variable)>0) {
     stop("Not implemented")
   } else if (args$batch_method=="MNN") {
     library(batchelor)
-    stopifnot(rownames(pca.mtx)==metacell_metadata.dt$cell)
+    #LJK - modify
+    #SEAcell naming, change cell (which does not containg metacells names anymore) to metacell which does
+    stopifnot(rownames(pca.mtx)==metacell_metadata.dt$metacell)
     pca.mtx <- reducedMNN(pca.mtx, batch=metacell_metadata.dt[[args$batch_variable]])$corrected
     colnames(pca.mtx) <- paste0("LSI",seq_len(ncol(pca.mtx)))
     pca.mtx <- pca.mtx[colnames(atac.se),]
@@ -221,9 +227,11 @@ for (i in args$n_neighbors) {
     rownames(umap_embedding.mtx) <- rownames(pca.mtx)
     
     # Fetch UMAP coordinates
+    #LJK - modify
+    #setnames(c("cell")) --> "metacell"
     umap.dt <- umap_embedding.mtx %>%
       as.data.table(keep.rownames = T) %>%
-      setnames(c("cell","umap1","umap2"))
+      setnames(c("metacell","umap1","umap2"))
     
     # Save UMAP coordinates
     # outfile <- sprintf("%s/umap_%s_nfeatures%d_ndims%d_neigh%d_dist%s.txt.gz",args$outdir, args$matrix, args$nfeatures, args$ndims, i, j)
@@ -231,9 +239,11 @@ for (i in args$n_neighbors) {
     fwrite(umap.dt, outfile)
 
     # Plot
+    #by="cell" --> "metacell"
     to.plot <- umap.dt %>%
-      merge(metacell_metadata.dt,by="cell")
-    
+      merge(metacell_metadata.dt,by="metacell")
+    #LJK - debugging
+    #print("step 1")
     # k <- "celltype"
     for (k in args$colour_by) {
 
@@ -244,7 +254,8 @@ for (i in args$n_neighbors) {
           to.plot %>% setnames(k,paste0(k,"_log10")); k <- paste0(k,"_log10")
         }
       }
-      
+      #LJK - debugging
+      #print("step 2")
       p <- ggplot(to.plot, aes_string(x="umap1", y="umap2", fill=k)) +
         geom_point(size=pt.size, shape=21, stroke=0.05) +
         # ggrastr::geom_point_rast(size=1.5, shape=21, stroke=0.05) +  # DOES NOT WORK IN THE CLUSTER
@@ -252,7 +263,10 @@ for (i in args$n_neighbors) {
         ggplot_theme_NoAxes()
       
       # Define colormap
-      if (is.numeric(to.plot[[j]])) {
+      #LJK - modify
+      #as in cell reduction j is 0.3 and cant be used.i think you mean k instead
+      #k used to be j, but then it would crash
+      if (is.numeric(to.plot[[k]])) {
         p <- p + scale_fill_gradientn(colours = terrain.colors(10))
       }
 

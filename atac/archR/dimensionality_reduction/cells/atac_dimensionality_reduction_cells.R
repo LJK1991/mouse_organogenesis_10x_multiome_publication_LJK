@@ -285,7 +285,9 @@ if (length(args$batch_variable)>0) {
     })
     
     # perform correction over stages
-    lsi.mtx <- reducedMNN(correct_list, merge.order=1:length(correct_list))$corrected 
+    #LJK - modify - 230613
+    #same error as in dimensionality_reduction_sce.R on the rna part. if batch is length(1) it needs to be specified. if it is >1 it will be ignored
+    lsi.mtx <- reducedMNN(correct_list, merge.order=1:length(correct_list), batch=rep(names(correct_list),dim(correct_list[[1]])[1]))$corrected 
     rm(correct_list,lsi_list)
     
   } else {
@@ -357,7 +359,9 @@ for (i in args$n_neighbors) {
         ggplot_theme_NoAxes()
       
       # Define colormap
-      if (is.numeric(to.plot[[j]])) {
+      #LJK - 230614 - modify
+      #is.numeric(to.plot[[j]])) is a typo probably? j == 0.3 and cannot be used to call in a list. change it to k
+      if (is.numeric(to.plot[[k]])) {
         p <- p + scale_fill_gradientn(colours = terrain.colors(10))
       }
 

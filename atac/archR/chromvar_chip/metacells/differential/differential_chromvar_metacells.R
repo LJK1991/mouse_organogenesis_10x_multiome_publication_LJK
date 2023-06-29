@@ -68,9 +68,11 @@ opts$groups <- c(args$groupA,args$groupB)
 
 print("Loading metacells...")
 
+#LJK - modify
+#have no genotype
 metacell_metadata.dt <- fread(args$metadata) %>%
-  .[celltype%in%args$celltypes & sample%in%args$samples] %>%
-  .[,celltype_genotype:=sprintf("%s_%s",celltype,genotype)]
+  .[celltype%in%args$celltypes & sample%in%args$samples]
+# %>% .[,celltype_genotype:=sprintf("%s_%s",celltype,genotype)]
 
 stopifnot(args$group_variable%in%colnames(metacell_metadata.dt))
 

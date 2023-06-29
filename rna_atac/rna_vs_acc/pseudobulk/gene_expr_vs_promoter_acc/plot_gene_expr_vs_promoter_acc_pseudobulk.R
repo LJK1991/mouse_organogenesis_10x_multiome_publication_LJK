@@ -159,76 +159,80 @@ genes.to.plot <- genes.to.plot[genes.to.plot%in%unique(rna_atac.dt$gene)]
 
 # i <- "Ubb"
 for (i in genes.to.plot) {
+  print(paste("current gene: ", i,sep=""))
   outfile <- file.path(args$outdir,sprintf("individual_genes/%s_gene_expr_vs_promoter_acc_pseudobulk.png",i))
   if (!file.exists(outfile)) {
     to.plot <- rna_atac.dt[gene==i] %>% .[,celltype:=factor(celltype,levels=opts$celltypes)]
     to.plot2 <- to.plot %>% melt(id.vars=c("celltype","gene"))
-    
-    ## Scatterplot ##
+    #LJK - add - 230627
+    #in my dataset i find a marker in the marker list that has expression of 0 across the board. causes it to crash.
+    #make a quick fail save for genes that are just not captured
+    if (all(to.plot$expr == 0)){
+      next
+    } else {
+      ## Scatterplot ##
+      p.scatter <- ggscatter(to.plot, x="acc", y="expr", fill="celltype", size=4, shape=21, 
+                      add="reg.line", add.params = list(color="black", fill="lightgray"), conf.int=TRUE) +
+        stat_cor(method = "pearson", label.x.npc = "middle", label.y.npc = "bottom") +
+        scale_fill_manual(values=opts$celltype.colors) +
+        labs(y=sprintf("%s expression",i), x=sprintf("%s Gene accessibility",i)) +
+        guides(fill="none") +
+        theme(
+          axis.text = element_text(size=rel(0.8))
+        )
 
-    p.scatter <- ggscatter(to.plot, x="acc", y="expr", fill="celltype", size=4, shape=21, 
-                    add="reg.line", add.params = list(color="black", fill="lightgray"), conf.int=TRUE) +
-      stat_cor(method = "pearson", label.x.npc = "middle", label.y.npc = "bottom") +
-      scale_fill_manual(values=opts$celltype.colors) +
-      labs(y=sprintf("%s expression",i), x=sprintf("%s Gene accessibility",i)) +
-      guides(fill="none") +
-      theme(
-        axis.text = element_text(size=rel(0.8))
-      )
-
-    ## Barplot ##
-    
-    p.barplot <- ggbarplot(to.plot2, x="celltype", y="value", fill="celltype") +
-      facet_wrap(~variable, nrow=2, scales="free_y",  labeller = as_labeller(facet.labels)) +
-      scale_fill_manual(values=opts$celltype.colors) +
-      geom_hline(yintercept=0, linetype="dashed") +
-      labs(x="", y="") +
-      theme_classic() +
-      guides(x = guide_axis(angle = 90)) +
-      theme(
-        axis.text.y = element_text(color="black", size=rel(0.9)),
-        legend.position = "none",
-        axis.text.x = element_blank(),
-        axis.title.x = element_blank(),
-        axis.ticks.x = element_blank()
-      )
+      ## Barplot ##
+      p.barplot <- ggbarplot(to.plot2, x="celltype", y="value", fill="celltype") +
+        facet_wrap(~variable, nrow=2, scales="free_y",  labeller = as_labeller(facet.labels)) +
+        scale_fill_manual(values=opts$celltype.colors) +
+        geom_hline(yintercept=0, linetype="dashed") +
+        labs(x="", y="") +
+        theme_classic() +
+        guides(x = guide_axis(angle = 90)) +
+        theme(
+          axis.text.y = element_text(color="black", size=rel(0.9)),
+          legend.position = "none",
+          axis.text.x = element_blank(),
+          axis.title.x = element_blank(),
+          axis.ticks.x = element_blank()
+        )
       
 
-    ## PAGA ##
-    expr.values <- rna_atac.dt[gene==i,c("celltype","expr")] %>% matrix.please %>% .[opts$celltypes,] %>% minmax.normalisation
-    expr.colors <- round(expr.values,1) %>% map(~ rna.colors[which(rna.col.seq == .)]) %>% unlist
+      ## PAGA ##
+      expr.values <- rna_atac.dt[gene==i,c("celltype","expr")] %>% matrix.please %>% .[opts$celltypes,] %>% minmax.normalisation
+      expr.colors <- round(expr.values,1) %>% map(~ rna.colors[which(rna.col.seq == .)]) %>% unlist
   
-    p.paga.expr <- p.paga + geom_text(label = "\u25D0", aes(x=x, y=y), color=expr.colors, size=15, family = "Arial Unicode MS",
-                  data = p.paga$data[,c("x","y")] %>% dplyr::mutate(expr=expr.colors)) +
-      scale_colour_manual(values=expr.colors) + 
-      labs(title="RNA expression") +
-      theme(
-        plot.margin = margin(t = 15, r = 15, b = 15, l = 15, unit = "pt"),
-        plot.title = element_text(hjust = 0.5)
-      )
+      p.paga.expr <- p.paga + geom_text(label = "\u25D0", aes(x=x, y=y), color=expr.colors, size=15, family = "Arial Unicode MS",
+                    data = p.paga$data[,c("x","y")] %>% dplyr::mutate(expr=expr.colors)) +
+        scale_colour_manual(values=expr.colors) + 
+        labs(title="RNA expression") +
+        theme(
+          plot.margin = margin(t = 15, r = 15, b = 15, l = 15, unit = "pt"),
+          plot.title = element_text(hjust = 0.5)
+        )
   
-    # motif accessibility
-    acc.values <- rna_atac.dt[gene==i,c("celltype","acc")] %>% matrix.please %>% .[opts$celltypes,] %>% minmax.normalisation
-    if (all(is.na(acc.values))) { acc.values <- rep(0,length(acc.values)) }
-    acc.colors <- round(acc.values,1) %>% map(~ atac.colors[which(atac.col.seq == .)]) %>% unlist
+      # motif accessibility
+      acc.values <- rna_atac.dt[gene==i,c("celltype","acc")] %>% matrix.please %>% .[opts$celltypes,] %>% minmax.normalisation
+      if (all(is.na(acc.values))) { acc.values <- rep(0,length(acc.values)) }
+      acc.colors <- round(acc.values,1) %>% map(~ atac.colors[which(atac.col.seq == .)]) %>% unlist
     
-    p.paga.acc <- p.paga + geom_text(label = "\u25D1", aes(x=x, y=y), color=acc.colors, size=15, family = "Arial Unicode MS",
-                  data = p.paga$data[,c("x","y")] %>% dplyr::mutate(acc=acc.colors)) +
-      scale_fill_manual(values=acc.colors) + 
-      labs(title="Gene accessibility") +
-      theme(
-        plot.margin = margin(t = 15, r = 15, b = 15, l = 15, unit = "pt"),
-        plot.title = element_text(hjust = 0.5)
-      )
+      p.paga.acc <- p.paga + geom_text(label = "\u25D1", aes(x=x, y=y), color=acc.colors, size=15, family = "Arial Unicode MS",
+                    data = p.paga$data[,c("x","y")] %>% dplyr::mutate(acc=acc.colors)) +
+        scale_fill_manual(values=acc.colors) + 
+        labs(title="Gene accessibility") +
+        theme(
+          plot.margin = margin(t = 15, r = 15, b = 15, l = 15, unit = "pt"),
+          plot.title = element_text(hjust = 0.5)
+        ) 
       
     
-    p <- (p.scatter+p.barplot+p.paga.expr+p.paga.acc) + plot_layout(nrow=1, widths=c(1,1,0.6,0.6))
+      p <- (p.scatter+p.barplot+p.paga.expr+p.paga.acc) + plot_layout(nrow=1, widths=c(1,1,0.6,0.6))
     
-    png(outfile, width = 1600, height = 500)
-    # pdf(outfile, height=8, width=11)
-    print(p)
-    dev.off()
-
+      png(outfile, width = 1600, height = 500)
+      # pdf(outfile, height=8, width=11)
+      print(p)
+      dev.off()
+    }
   }
 }
 

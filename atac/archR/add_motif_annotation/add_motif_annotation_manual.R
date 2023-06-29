@@ -22,6 +22,9 @@ p$add_argument('--folder_manual_motifs',     type="character", help='Folder with
 p$add_argument('--test',  action="store_true",  help='Test mode?')
 args <- p$parse_args(commandArgs(TRUE))
 
+#LJK-modify-230508
+#set folder_manual_motifs to NULL
+args$folder_manual_motifs <- NULL
 ## START TEST ##
 # args$archr_directory <- file.path(io$basedir,"processed/atac/archR")
 # args$peak_calls <- file.path(io$basedir,"processed/atac/archR/PeakCalls/PeakSet.rds")

@@ -3,6 +3,10 @@ here::i_am("atac/archR/differential/pseudobulk/celltype/parse_differential_resul
 # Load default settings
 source(here::here("settings.R"))
 
+#LJK
+# for some reason this script seems to crashes in snakemake, unable to either make the outdir ater which it complains that the outfile cannot be made.
+# when running it manually with the input given by snakemake it runs perfectly fine. not sure what is going on.
+
 ######################
 ## Define arguments ##
 ######################
@@ -53,8 +57,10 @@ fwrite(rbindlist(diff_results_list), file.path(args$outdir,"diff_results.txt.gz"
 ##########
 ## TEST ##
 ##########
-
-tmp <- fread("/bi/group/reik/ricard/data/gastrulation_multiome_10x/test/results/atac/archR/differential/pseudobulk/celltype/PeakMatrix/parsed/diff_results.txt.gz") %>%
-  .[abs(logFC)>=2 & padj_fdr<=0.01 & (mean_groupA>=2.5 | mean_groupB>=2.5)] %>% .[,.N,by="feature"]
+#LJK - modify - 230613
+#why is this done with a static path and not an argument like args$ / opts$
+#"/bi/group/reik/ricard/data/gastrulation_multiome_10x/test/results/atac/archR/differential/pseudobulk/celltype/PeakMatrix/parsed/diff_results.txt.gz"
+#additionally if it is "TEST" why is it not commented out?, will leave it in for now, just in case it does something important, which i dont think it does
+tmp <- fread(file.path(args$diff_results_dir, "parsed/diff_results.txt.gz")) %>% .[abs(logFC)>=2 & padj_fdr<=0.01 & (mean_groupA>=2.5 | mean_groupB>=2.5)] %>% .[,.N,by="feature"]
 
 sum(tmp$N>=2)

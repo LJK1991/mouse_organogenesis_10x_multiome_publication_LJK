@@ -2,20 +2,26 @@
 ## Global variables ##
 ######################
 
-samples: ["E7.5_rep1", "E7.5_rep2"]
-stages: ["E7.5","E7.75","E8.0","E8.5","E8.75"]
+samples: ["Day_4_L", "Day_4_R"]
+stages: ["E7.5"]
 celltypes: ["Epiblast", "Primitive_Streak", "Caudal_epiblast", "PGC", "Anterior_Primitive_Streak", "Notochord", "Def._endoderm", "Gut", "Nascent_mesoderm", "Mixed_mesoderm", "Intermediate_mesoderm", "Caudal_Mesoderm", "Paraxial_mesoderm", "Somitic_mesoderm", "Pharyngeal_mesoderm", "Cardiomyocytes", "Allantois", "ExE_mesoderm", "Mesenchyme", "Haematoendothelial_progenitors", "Endothelium", "Blood_progenitors_1", "Blood_progenitors_2", "Erythroid1", "Erythroid2", "Erythroid3", "NMP", "Rostral_neurectoderm", "Caudal_neurectoderm", "Neural_crest", "Forebrain_Midbrain_Hindbrain", "Spinal_cord", "Surface_ectoderm", "Visceral_endoderm", "ExE_endoderm", "ExE_ectoderm", "Parietal_endoderm"]
-# trajectories: ["nmp"]
+trajectories: ["Haemo","Mesen","HeaMen"]
 
 #################
 ## Directories ##
 #################
 
+#directories:
+#base: /home/lucas/Documents/Work/agrAnalysis
+#original_data: /home/lucas/Documents/Work/agrAnalysis/data/original
+#archr_directory: /home/lucas/Documents/Work/agrAnalysis/data/processed/atac/archR
+#results: /home/lucas/Documents/Work/agrAnalysis/results/atac/archR
+
 directories:
-    base: /home/lucas/Documents/agrAnalysis/
-    original_data: /home/lucas/Documents/Work/mouse_ATAC/ftp1.babraham.ac.uk/data/atac
-    archr_directory: /home/lucas/Documents/agrAnalysis/data/processed/atac/archR
-    results: /home/lucas/Documents/agrAnalysis/results/atac/archR
+    base: /media/draco/lucask/chapter_three/agrAnalysis
+    original_data: /media/draco/lucask/chapter_three/agrAnalysis/data/original
+    archr_directory: /media/draco/lucask/chapter_three/agrAnalysis/data/processed/atac/archR
+    results: /media/draco/lucask/chapter_three/agrAnalysis/results/atac/archR
     
 #############
 ## Scripts ##
@@ -94,13 +100,20 @@ scripts:
 ###############
 ## Resources ##
 ###############
+#/media/draco/lucask/chapter_three
+#resources:
+    #genome: mm10
+    #gene_metadata: /home/lucas/Documents/Work/agrAnalysis/Mmusculus_genes_BioMart.87.txt
+    #cell_metadata: /home/lucas/Documents/Work/agrAnalysis/results/rna/mapping/sample_metadata_after_mapping.txt.gz
+    #manual_motifs: /bi/group/reik/ricard/data/hg38_regulation/tf_motifs/jaspar # this one is a thing as well, where to get it
+    #python: /home/lucas/mambaforge/envs/snakemake/bin/python
 
 resources:
     genome: mm10
-    gene_metadata: /home/lucas/Documents/agrAnalysis/Mmusculus_genes_BioMart.87.txt
-    cell_metadata: /home/lucas/Documents/agrAnalysis/results/rna/mapping/sample_metadata_after_mapping.txt.gz
-    manual_motifs: /bi/group/reik/ricard/data/hg38_regulation/tf_motifs/jaspar # this one is a thing as well, where to get it
-    python: /mnt/appl/anaconda/bin/python
+    gene_metadata: /media/draco/lucask/chapter_three/agrAnalysis/Mmusculus_genes_BioMart.87.txt
+    cell_metadata: /media/draco/lucask/chapter_three/agrAnalysis/results/rna/mapping/sample_metadata_after_mapping.txt.gz
+    manual_motifs: "/media/draco/lucask/chapter_three/agrAnalysis/JASPAR2022_CORE_vertebrates_non-redudant_pfms" # this one is a thing as well, where to get it
+    python: /media/draco/lucask/mambaforge/envs/Renv/bin/python
 
 ################
 ## Parameters ##
@@ -125,12 +138,13 @@ add_group_coverage:
 
 peak_calling:
     group_by: "celltype"
-    pathToMacs2: "/bi/group/reik/ricard/software/miniconda3/envs/main/bin/macs2"
+    pathToMacs2: "/usr/local/bin/macs2" # on kolossus
+    #pathToMacs2: "/home/lucas/.local/bin/macs3" #"/bi/group/reik/ricard/software/miniconda3/envs/main/bin/macs2"
     pvalue_cutoff: 0.001
     extend_summits: 300
 
 create_bigwigs:
-    group_by: ["celltype","celltype_genotype"]
+    group_by: ["celltype"]
     norm_method: "ReadsInTSS"
     tile_size: 100
     min_cells: 50
@@ -143,7 +157,7 @@ add_motif_annotation_manual:
 aggregate_atac_metacells:
     min_frags: 200000
     matrices: ["PeakMatrix", "GeneScoreMatrix_TSS"]
-    trajectories: ["nmp"]
+    trajectories: ["Haemo","Mesen","HeaMen"]
 
 dimensionality_reduction:
     matrix: "PeakMatrix"
@@ -168,7 +182,7 @@ dimensionality_reduction_metacells:
     colour_by: ["sample","stage","celltype","nFrags_atac"]
 
 pseudobulk:
-    group_by: ["celltype", "celltype_genotype"]
+    group_by: ["celltype"]
     matrix: ["PeakMatrix", "GeneScoreMatrix_TSS"]
 
 pseudobulk_with_replicates:
@@ -203,7 +217,7 @@ background_peaks:
 
 run_chromvar_pseudobulk:
     motif_annotation: ["JASPAR", "CISBP"]
-    group_by: ["celltype", "celltype_genotype"]
+    group_by: ["celltype"]
     min_peaks: 50
 
 run_chromvar_cells:
@@ -239,29 +253,29 @@ define_markers:
 
 slurm:  # memory in MB
     create_arrow_files: 
-        threads: 1
+        threads: 4
         memory: 5000
     create_archr_project:
-        threads: 1
-        memory: 5000
-    create_archr_metadata:
-        threads: 1
-        memory: 5000
-    qc_archr: 
-        threads: 2
-        memory: 4000
-    add_group_coverage:
         threads: 4
-        memory: 10000
+        memory: 32000
+    create_archr_metadata:
+        threads: 8
+        memory: 32000
+    qc_archr: 
+        threads: 4
+        memory: 32000
+    add_group_coverage:
+        threads: 8
+        memory: 32000
     add_gene_scores:
         threads: 4
-        memory: 80000
+        memory: 60000
     peak_calling:
-        threads: 2
-        memory: 80000
+        threads: 8
+        memory: 60000
     create_bigwigs:
-        threads: 4
-        memory: 50000
+        threads: 8
+        memory: 60000
     add_motif_annotation:
         threads: 1
         memory: 5000
@@ -270,43 +284,43 @@ slurm:  # memory in MB
         memory: 10000
     dimensionality_reduction:
         threads: 1
-        memory: 55000
+        memory: 60000
     dimensionality_reduction_metacells:
         threads: 1
-        memory: 15000
+        memory: 60000
     dimensionality_reduction_per_stage:
         threads: 1
-        memory: 25000
+        memory: 60000
     pseudobulk:
         threads: 1
-        memory: 5000
+        memory: 60000
     pseudobulk_with_replicates:
         threads: 1
         memory: 60000
     celltype_assignment:
         threads: 1
-        memory: 80000
+        memory: 60000
     background_peaks:
         threads: 1
-        memory: 10000
+        memory: 60000
     run_chromvar_pseudobulk:
         threads: 1
-        memory: 80000
+        memory: 60000
     run_chromvar_cells:
-        threads: 1
-        memory: 85000
+        threads: 4
+        memory: 60000
     compare_chromvar_pseudobulk:
         threads: 1
-        memory: 5000
+        memory: 60000
     link_peaks_to_genes:
         threads: 1
-        memory: 5000
+        memory: 60000
     calculate_feature_stats:
         threads: 1
-        memory: 50000
+        memory: 60000
     plot_motif_sequence_logo:
         threads: 1
-        memory: 5000
+        memory: 60000
 
     # Differential
     differential_cells:
@@ -338,5 +352,5 @@ slurm:  # memory in MB
         memory: 20000
     save_atac_anndata:
         threads: 1
-        memory: 100000
+        memory: 60000
 
